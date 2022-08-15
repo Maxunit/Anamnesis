@@ -26,7 +26,7 @@ public class CharacterFile : JsonFileBase
 		AppearanceBody = 32,
 		AppearanceExtended = 64,
 
-		Equipment = EquipmentGear | EquipmentAccessories,
+		Equipment = EquipmentGear | EquipmentAccessories | EquipmentWeapons,
 		Appearance = AppearanceHair | AppearanceFace | AppearanceBody | AppearanceExtended,
 
 		All = EquipmentGear | EquipmentAccessories | EquipmentWeapons | AppearanceHair | AppearanceFace | AppearanceBody | AppearanceExtended,

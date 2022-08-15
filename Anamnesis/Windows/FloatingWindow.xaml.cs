@@ -109,6 +109,7 @@ public partial class FloatingWindow : Window, IPanelGroupHost
 		{
 			this.canResize = value;
 			this.ResizeMode = this.canResize ? ResizeMode.CanResize : ResizeMode.NoResize;
+			this.SizeToContent = value ? SizeToContent.Manual : SizeToContent.WidthAndHeight;
 		}
 	}
 
@@ -167,31 +168,23 @@ public partial class FloatingWindow : Window, IPanelGroupHost
 
 		set
 		{
-			Log.Information("> " + value);
-
 			Rect screen = this.ScreenRect;
 			Rect pos = this.Rect;
 			pos.X = screen.X + (screen.Width * value.X) - (pos.Width * value.X);
 			pos.Y = screen.Y + (screen.Height * value.Y) - (pos.Height * value.Y);
 
-			if (value.Height > 0 || value.Width > 0)
+			if (this.CanResize)
 			{
-				this.SizeToContent = SizeToContent.Manual;
-			}
-			else if (value.Height > 0)
-			{
-				this.SizeToContent = SizeToContent.Width;
-			}
-			else if (value.Width > 0)
-			{
-				this.SizeToContent = SizeToContent.Height;
-			}
+				if (value.Height > 0)
+				{
+					pos.Height = value.Height;
+				}
 
-			if (value.Height > 0)
-				pos.Height = value.Height;
-
-			if (value.Width > 0)
-				pos.Width = value.Width;
+				if (value.Width > 0)
+				{
+					pos.Width = value.Width;
+				}
+			}
 
 			this.Rect = pos;
 		}

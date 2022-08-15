@@ -25,6 +25,7 @@ public class NavigationService : ServiceBase<NavigationService>
 		{ "Pose", typeof(PosePanel) },
 		{ "Transform", typeof(TransformPanel) },
 		{ "ImportCharacter", typeof(ImportCharacterPanel) },
+		{ "ImportPose", typeof(ImportPosePanel) },
 	};
 
 	/// <summary>
