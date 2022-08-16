@@ -52,20 +52,22 @@ public class TargetService : ServiceBase<TargetService>
 		lastUsedDefaultcolor = Random.Shared.Next(0, DefaultColors.Count);
 	}
 
-	public static event SelectionEvent? ActorSelected;
 	public static event PinnedEvent? ActorPinned;
 	public static event PinnedEvent? ActorUnPinned;
+	public event SelectionEvent? ActorSelected;
 
 	public ActorBasicMemory PlayerTarget { get; private set; } = new();
 	public bool IsPlayerTargetPinnable => this.PlayerTarget.Address != IntPtr.Zero && this.PlayerTarget.ObjectKind.IsSupportedType();
 
-	public PinnedActor? CurrentlyPinned { get; private set; }
+	public PinnedActor? CurrentSelection { get; private set; }
 	public ObservableCollection<PinnedActor> PinnedActors { get; set; } = new ObservableCollection<PinnedActor>();
 
-	[DependsOn(nameof(CurrentlyPinned))]
-	public ActorMemory? SelectedActor => this.CurrentlyPinned?.Memory;
+	[DependsOn(nameof(CurrentSelection))]
+	public ActorMemory? SelectedActor => this.CurrentSelection?.Memory;
 
 	public int PinnedActorCount { get; private set; }
+
+	public bool SyncTarget { get; set; }
 
 	[DependsOn(nameof(PinnedActorCount))]
 	public bool MoreThanFourPins => this.PinnedActorCount > 4;
@@ -242,6 +244,11 @@ public class TargetService : ServiceBase<TargetService>
 				foreach (PinnedActor pinnedActor in this.PinnedActors)
 				{
 					pinnedActor.IsTargeted = pinnedActor.Pointer == currentPlayerTargetPtr;
+
+					if (this.SyncTarget && pinnedActor.IsTargeted && !pinnedActor.IsSelected)
+					{
+						pinnedActor.IsSelected = true;
+					}
 				}
 			}
 		}
@@ -335,7 +342,7 @@ public class TargetService : ServiceBase<TargetService>
 
 	public void ClearSelection()
 	{
-		if (this.CurrentlyPinned == null)
+		if (this.CurrentSelection == null)
 			return;
 
 		if (App.Current == null)
@@ -343,7 +350,7 @@ public class TargetService : ServiceBase<TargetService>
 
 		App.Current.Dispatcher.Invoke(() =>
 		{
-			this.CurrentlyPinned = null;
+			this.CurrentSelection = null;
 
 			foreach (PinnedActor actor in this.PinnedActors)
 			{
@@ -422,24 +429,29 @@ public class TargetService : ServiceBase<TargetService>
 	{
 		App.Current.Dispatcher.Invoke(() =>
 		{
-			if (this.CurrentlyPinned == actor)
+			if (this.CurrentSelection == actor)
 			{
 				// Raise the event in case the underlying memory changed
-				this.RaisePropertyChanged(nameof(TargetService.CurrentlyPinned));
+				this.RaisePropertyChanged(nameof(TargetService.CurrentSelection));
 				this.RaisePropertyChanged(nameof(TargetService.SelectedActor));
 			}
 			else
 			{
-				this.CurrentlyPinned = actor;
+				this.CurrentSelection = actor;
 			}
 
-			ActorSelected?.Invoke(actor?.Memory);
+			this.ActorSelected?.Invoke(actor?.Memory);
 
 			foreach (PinnedActor ac in this.PinnedActors)
 			{
 				ac.SelectionChanged();
 			}
 		});
+
+		if (this.SyncTarget && actor != null)
+		{
+			SetPlayerTarget(actor.Pointer);
+		}
 	}
 
 	private static void SetPlayerTarget(IntPtr? ptr)

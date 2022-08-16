@@ -4,10 +4,8 @@
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:XivToolsWpf="clr-namespace:XivToolsWpf.Controls;assembly=XivToolsWpf"
 	xmlns:ana="clr-namespace:Anamnesis"
-	xmlns:controls="clr-namespace:Anamnesis.Controls"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:local="clr-namespace:Anamnesis.Navigation"
-	xmlns:materialdesign="http://materialdesigninxaml.net/winfx/xaml/themes"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:panels="clr-namespace:Anamnesis.Panels"
 	CanResize="False"
@@ -41,6 +39,7 @@
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
 			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
 		<Grid.ColumnDefinitions>
@@ -49,16 +48,51 @@
 			<ColumnDefinition Width="Auto" />
 		</Grid.ColumnDefinitions>
 
+		<!--  Actor List  -->
+		<Border
+			Grid.Row="1"
+			Grid.Column="0"
+			Margin="6"
+			Background="{DynamicResource MaterialDesignBackground}"
+			CornerRadius="6">
+
+			<Border.BitmapEffect>
+				<DropShadowBitmapEffect ShadowDepth="0" />
+			</Border.BitmapEffect>
+
+			<Grid>
+
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto" />
+					<RowDefinition />
+				</Grid.RowDefinitions>
+
+				<ToggleButton
+					Grid.Row="0"
+					Width="28"
+					Height="28"
+					HorizontalAlignment="Left"
+					ana:Behaviours.Tooltip="Target_Sync"
+					IsChecked="{Binding Services.Target.SyncTarget}"
+					Style="{StaticResource TransparentIconToggleButton}">
+					<XivToolsWpf:IconBlock Icon="SyncAlt" />
+				</ToggleButton>
+
+				<local:ActorList Grid.Row="1" />
+			</Grid>
+
+
+		</Border>
+
 		<!--  Navigation Bar  -->
 		<Grid
-			x:Name="Sidebar"
-			Grid.Row="1"
+			Grid.Row="2"
 			Grid.Column="0"
 			Margin="6,6,0,0"
 			HorizontalAlignment="Left">
 
 			<Grid.RowDefinitions>
-				<RowDefinition Height="18" />
+				<RowDefinition Height="Auto" />
 				<RowDefinition />
 			</Grid.RowDefinitions>
 
@@ -77,7 +111,7 @@
 								Value="False">
 								<Setter Property="HorizontalAlignment" Value="Left" />
 								<Setter Property="VerticalAlignment" Value="Stretch" />
-								<Setter Property="Width" Value="48" />
+								<Setter Property="Width" Value="40" />
 
 							</DataTrigger>
 						</Style.Triggers>
@@ -87,44 +121,37 @@
 				<Border.BitmapEffect>
 					<DropShadowBitmapEffect ShadowDepth="0" />
 				</Border.BitmapEffect>
-
-				<Grid
-					Height="18"
-					VerticalAlignment="Top"
-					Background="Transparent">
-
-					<Button
-						Width="22"
-						HorizontalAlignment="Right"
-						Click="OnTitlebarContextButtonClicked"
-						Style="{StaticResource TransparentIconButton}">
-						<XivToolsWpf:IconBlock
-							Foreground="{DynamicResource MaterialDesignToolForeground}"
-							Icon="AngleDown" />
-					</Button>
-
-					<Grid.ContextMenu>
-						<ContextMenu x:Name="NavigationContextMenu">
-							<MenuItem
-								Header="Navigation_Options_Accordion"
-								IsCheckable="True"
-								IsChecked="{Binding IsAccordian}"
-								Style="{StaticResource AnaMenuItem}" />
-
-							<MenuItem
-								Header="Navigation_Options_Expanded"
-								IsCheckable="True"
-								IsChecked="{Binding Expanded}"
-								Style="{StaticResource AnaMenuItem}" />
-
-						</ContextMenu>
-					</Grid.ContextMenu>
-				</Grid>
 			</Border>
+
+			<ToggleButton
+				Grid.Row="0"
+				Width="28"
+				Margin="3"
+				HorizontalAlignment="Right"
+				IsChecked="{Binding Expanded}"
+				Style="{StaticResource TransparentToggleButton}"
+				Visibility="{Binding Expanded, Converter={StaticResource B2V}}">
+				<XivToolsWpf:IconBlock
+					Foreground="{DynamicResource MaterialDesignToolForeground}"
+					Icon="AngleLeft" />
+			</ToggleButton>
+
+			<ToggleButton
+				Grid.Row="0"
+				Width="33"
+				Margin="3"
+				HorizontalAlignment="Left"
+				IsChecked="{Binding Expanded}"
+				Style="{StaticResource TransparentToggleButton}"
+				Visibility="{Binding Expanded, Converter={StaticResource !B2V}}">
+				<XivToolsWpf:IconBlock
+					Foreground="{DynamicResource MaterialDesignToolForeground}"
+					Icon="AngleRight" />
+			</ToggleButton>
 
 			<StackPanel
 				Grid.Row="1"
-				Margin="6,0">
+				Margin="3,0,0,0">
 
 				<local:Shortcut
 					Destination="Settings"
@@ -147,25 +174,41 @@
 					ShowText="{Binding Expanded}"
 					ToolTipKey="Naviagation_Camera_Tip" />
 
-				<ItemsControl
-					x:Name="PinnedActorList"
-					ana:Behaviours.IsReorderable="True"
-					ItemsSource="{Binding Services.Target.PinnedActors}">
-					<ItemsControl.ItemTemplate>
-						<DataTemplate>
-							<local:ActorEntry
-								Expanded="OnActorEntryExpanded"
-								ShowText="{Binding Path=DataContext.Expanded, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
-						</DataTemplate>
-					</ItemsControl.ItemTemplate>
-				</ItemsControl>
+				<local:Shortcut
+					Destination="ActorInfo"
+					Icon="Pen"
+					LabelKey="Naviagation_Actor_Info"
+					ShowText="{Binding Expanded}"
+					ToolTipKey="Naviagation_Actor_Info_Tip" />
 
 				<local:Shortcut
-					Destination="AddActor"
-					Icon="Plus"
-					LabelKey="Naviagation_AddActor"
+					Destination="ActorCustomize"
+					Icon="IdCardAlt"
+					LabelKey="Naviagation_Actor_Customize"
 					ShowText="{Binding Expanded}"
-					ToolTipKey="Naviagation_AddActor_Tip" />
+					ToolTipKey="Naviagation_Actor_Customize_Tip" />
+
+				<local:Shortcut
+					Destination="ActorEquipment"
+					Icon="HatCowboy"
+					LabelKey="Naviagation_Actor_Equipment"
+					ShowText="{Binding Expanded}"
+					ToolTipKey="Naviagation_Actor_Equipment_Tip" />
+
+				<!--<local:Shortcut
+					Destination="Action"
+					Icon="Biking"
+					LabelKey="Naviagation_Actor_Action"
+					ShowText="{Binding ShowText}"
+					ToolTipKey="Naviagation_Actor_Action_Tip" />-->
+
+				<local:Shortcut
+					Destination="Pose"
+					Icon="Running"
+					LabelKey="Naviagation_Actor_Pose"
+					ShowText="{Binding Expanded}"
+					ToolTipKey="Naviagation_Actor_Pose_Tip" />
+
 			</StackPanel>
 		</Grid>
 

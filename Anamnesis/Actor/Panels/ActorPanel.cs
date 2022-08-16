@@ -7,7 +7,6 @@ using Anamnesis.Memory;
 using Anamnesis.Panels;
 using System.ComponentModel;
 using System.Threading.Tasks;
-using System.Windows;
 using XivToolsWpf.Extensions;
 
 public abstract class ActorPanelBase : PanelBase
@@ -15,7 +14,8 @@ public abstract class ActorPanelBase : PanelBase
 	protected ActorPanelBase(IPanelGroupHost host)
 		: base(host)
 	{
-		this.DataContextChanged += this.OnDataContextChanged;
+		this.Services.Target.ActorSelected += this.OnActorSelected;
+		this.OnActorSelected(this.Services.Target.CurrentSelection?.GetMemory());
 	}
 
 	////public override string Id => base.Id + "_" + this.Actor?.Names.DisplayName;
@@ -26,21 +26,18 @@ public abstract class ActorPanelBase : PanelBase
 		return Task.CompletedTask;
 	}
 
-	private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+	private void OnActorSelected(ActorMemory? actor)
 	{
+		if (actor == null)
+			return;
+
 		if (this.Actor != null)
 		{
 			this.Actor.PropertyChanged -= this.OnActorPropertyChanged;
 			this.Actor.Names.PropertyChanged -= this.OnActorPropertyChanged;
 		}
 
-		this.Actor = null;
-
-		if (this.DataContext is ActorMemory actor)
-			this.Actor = actor;
-
-		if (this.DataContext is PinnedActor pinnedActor)
-			this.Actor = pinnedActor.GetMemory();
+		this.Actor = actor;
 
 		if (this.Actor == null)
 			return;

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Anamnesis.Core.Memory;
 using Anamnesis.Files;
 using Anamnesis.Memory;
+using Anamnesis.Navigation;
 using Anamnesis.Services;
 using PropertyChanged;
 
@@ -194,6 +195,11 @@ public class PoseService : ServiceBase<PoseService>
 		EnabledChanged?.Invoke(enabled);
 
 		this.RaisePropertyChanged(nameof(this.IsEnabled));
+
+		if (enabled)
+		{
+			NavigationService.Navigate(new("Transform"));
+		}
 	}
 
 	private static async Task ExtractStandardPoses()

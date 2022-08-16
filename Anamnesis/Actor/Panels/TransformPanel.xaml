@@ -9,8 +9,9 @@
 	xmlns:local="clr-namespace:Anamnesis.Actor.Panels"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:panels="clr-namespace:Anamnesis.Panels"
-	d:DesignHeight="600"
-	d:DesignWidth="250"
+	Width="250"
+	Height="512"
+	CanResize="False"
 	mc:Ignorable="d">
 	<Grid>
 		<Grid>

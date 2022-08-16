@@ -68,7 +68,7 @@ public class Names : INotifyPropertyChanged
 	}
 
 	// Should be a setting.
-	private DisplayModes DisplayMode => DisplayModes.FullName;
+	private DisplayModes DisplayMode => DisplayModes.SurnameAbreviated;
 
 	public void Update()
 	{

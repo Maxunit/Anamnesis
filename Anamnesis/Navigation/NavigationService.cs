@@ -15,7 +15,6 @@ public class NavigationService : ServiceBase<NavigationService>
 	{
 		{ "GenericDialog", typeof(GenericDialogPanel) },
 		{ "Exception", typeof(ExceptionPanel) },
-		{ "AddActor", typeof(AddActorPanel) },
 		{ "Settings", typeof(SettingsPanel) },
 		{ "Weather", typeof(WeatherPanel) },
 		{ "ActorInfo", typeof(ActorInfoPanel) },

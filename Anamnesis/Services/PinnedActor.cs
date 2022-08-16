@@ -76,7 +76,7 @@ public class PinnedActor : INotifyPropertyChanged, IDisposable
 	{
 		get
 		{
-			return TargetService.Instance.CurrentlyPinned == this;
+			return TargetService.Instance.CurrentSelection == this;
 		}
 
 		set

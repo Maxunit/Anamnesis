@@ -1,34 +1,37 @@
 ﻿// © Anamnesis.
 // Licensed under the MIT license.
 
-namespace Anamnesis.Panels;
+namespace Anamnesis.Navigation;
 
-using System;
+using Anamnesis.Memory;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Windows;
-using Anamnesis.Memory;
+using System.Windows.Controls;
 using XivToolsWpf;
+using XivToolsWpf.Extensions;
 using XivToolsWpf.Selectors;
 
-public partial class AddActorPanel : PanelBase
+public partial class ActorList : UserControl, INotifyPropertyChanged
 {
 	private static readonly ActorFilter FilterInstance = new();
 
-	public AddActorPanel(IPanelGroupHost host)
-		: base(host)
+	public ActorList()
 	{
 		this.InitializeComponent();
-
-		this.ContentArea.DataContext = this;
-
 		this.PropertyChanged += this.OnSelfPropertyChanged;
+		this.ActorSelectorContentArea.DataContext = this;
 	}
+
+	public event PropertyChangedEventHandler? PropertyChanged;
 
 	public ActorFilter Filter => FilterInstance;
 
 	protected Task LoadItems()
 	{
+		if (!ActorService.Exists)
+			return Task.CompletedTask;
+
 		this.Selector.AddItems(ActorService.Instance.GetAllActors());
 		return Task.CompletedTask;
 	}
@@ -42,6 +45,27 @@ public partial class AddActorPanel : PanelBase
 	{
 		this.Selector.Value = TargetService.GetTargetedActor();
 		this.Selector.RaiseSelectionChanged();
+	}
+
+	private void OnAddActorClicked(object sender, RoutedEventArgs e)
+	{
+		this.ActorSelectorPopup.IsOpen = true;
+
+		this.Selector.ClearItems();
+		this.Selector.AddItems(ActorService.Instance.GetAllActors());
+		this.Selector.FilterItems();
+	}
+
+	private void OnActorSelected(bool close)
+	{
+		this.ActorSelectorPopup.IsOpen = false;
+
+		ActorBasicMemory? actor = this.Selector.Value as ActorBasicMemory;
+
+		if (actor == null)
+			return;
+
+		TargetService.PinActor(actor).Run();
 	}
 
 	public class ActorFilter : Selector.FilterBase<ActorBasicMemory>
