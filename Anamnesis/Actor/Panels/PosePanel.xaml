@@ -319,41 +319,6 @@
 							VerticalAlignment="Center"
 							Orientation="Horizontal">
 
-							<ToggleButton
-								Height="28"
-								Margin="8,0,6,0"
-								IsChecked="{Binding Services.Pose.IsEnabled}"
-								IsEnabled="{Binding Services.Gpose.IsGpose}"
-								Style="{StaticResource MaterialDesignSwitchToggleButton}" />
-
-							<CheckBox
-								Margin="3,0,6,0"
-								VerticalContentAlignment="Center"
-								IsChecked="{Binding Services.Pose.FreezePhysics}"
-								IsEnabled="{Binding Services.Pose.IsEnabled}">
-								<XivToolsWpf:TextBlock Key="Pose_FreezePhysics" />
-							</CheckBox>
-
-							<CheckBox
-								Margin="3,0,6,0"
-								IsChecked="{Binding Services.Pose.FreezeWorldPosition}"
-								IsEnabled="{Binding Services.Gpose.IsGpose}"
-								Visibility="{Binding IsValidWeapon, Converter={StaticResource B2V}}">
-
-								<ToggleButton.ToolTip>
-									<XivToolsWpf:TextBlock Key="Character_Action_GlobalFreezeWorldPositionsTooltip" />
-								</ToggleButton.ToolTip>
-
-								<XivToolsWpf:TextBlock Key="Character_Action_GlobalFreezeWorldPositions" />
-							</CheckBox>
-
-							<CheckBox
-								Margin="3,0,6,0"
-								VerticalContentAlignment="Center"
-								IsChecked="{Binding Services.Pose.EnableParenting}"
-								IsEnabled="{Binding Services.Pose.IsEnabled}">
-								<XivToolsWpf:TextBlock Key="Pose_Parenting" />
-							</CheckBox>
 
 							<Button
 								MinWidth="48"
@@ -367,56 +332,7 @@
 
 						</StackPanel>
 
-						<Border
-							Margin="2"
-							Padding="3"
-							HorizontalAlignment="Right"
-							Background="{DynamicResource AttentionToActionBrush}"
-							CornerRadius="6">
-							<StackPanel Orientation="Horizontal">
-								<CheckBox
-									Margin="3"
-									VerticalContentAlignment="Center"
-									IsChecked="{Binding Services.Pose.FreezeRotation}"
-									IsEnabled="{Binding Services.Pose.IsEnabled}">
-									<XivToolsWpf:TextBlock
-										Key="Pose_EnableRotation"
-										Margin="0,-2,0,2" />
 
-									<CheckBox.ToolTip>
-										<XivToolsWpf:TextBlock Key="Pose_EnableRotationTooltip" />
-									</CheckBox.ToolTip>
-								</CheckBox>
-
-								<CheckBox
-									Margin="3"
-									VerticalContentAlignment="Center"
-									IsChecked="{Binding Services.Pose.FreezePositions}"
-									IsEnabled="{Binding Services.Pose.IsEnabled}">
-									<XivToolsWpf:TextBlock
-										Key="Pose_EnablePosition"
-										Margin="0,-2,0,2" />
-
-									<CheckBox.ToolTip>
-										<XivToolsWpf:TextBlock Key="Pose_EnablePositionTooltip" />
-									</CheckBox.ToolTip>
-								</CheckBox>
-
-								<CheckBox
-									Margin="3"
-									VerticalContentAlignment="Center"
-									IsChecked="{Binding Services.Pose.FreezeScale}"
-									IsEnabled="{Binding Services.Pose.IsEnabled}">
-									<XivToolsWpf:TextBlock
-										Key="Pose_EnableScale"
-										Margin="0,-2,0,2" />
-
-									<CheckBox.ToolTip>
-										<XivToolsWpf:TextBlock Key="Pose_EnableScaleTooltip" />
-									</CheckBox.ToolTip>
-								</CheckBox>
-							</StackPanel>
-						</Border>
 					</Grid>
 				</Border>
 			</Grid>

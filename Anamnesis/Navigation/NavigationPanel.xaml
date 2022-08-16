@@ -7,6 +7,7 @@
 	xmlns:controls="clr-namespace:Anamnesis.Controls"
 	xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 	xmlns:local="clr-namespace:Anamnesis.Navigation"
+	xmlns:materialdesign="http://materialdesigninxaml.net/winfx/xaml/themes"
 	xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:panels="clr-namespace:Anamnesis.Panels"
 	CanResize="False"
@@ -38,13 +39,21 @@
 		Margin="0,0,6,6">
 
 		<Grid.RowDefinitions>
-			<RowDefinition />
-			<RowDefinition />
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
 		</Grid.RowDefinitions>
 
+		<Grid.ColumnDefinitions>
+			<ColumnDefinition Width="Auto" />
+			<ColumnDefinition Width="Auto" />
+			<ColumnDefinition Width="Auto" />
+		</Grid.ColumnDefinitions>
+
+		<!--  Navigation Bar  -->
 		<Grid
 			x:Name="Sidebar"
 			Grid.Row="1"
+			Grid.Column="0"
 			Margin="6,6,0,0"
 			HorizontalAlignment="Left">
 
@@ -160,26 +169,28 @@
 			</StackPanel>
 		</Grid>
 
-		<Border
-			Grid.Row="0"
-			Margin="6,6,0,0"
-			Background="{DynamicResource MaterialDesignBackground}"
-			CornerRadius="6"
-			IsHitTestVisible="False">
-			<Border.BitmapEffect>
-				<DropShadowBitmapEffect ShadowDepth="0" />
-			</Border.BitmapEffect>
-		</Border>
-
+		<!--  Top bar  -->
 		<Grid
 			x:Name="TopBar"
 			Grid.Row="0"
+			Grid.ColumnSpan="2"
 			Margin="48,8,0,0">
 
 			<Grid.RowDefinitions>
 				<RowDefinition Height="Auto" />
 				<RowDefinition />
 			</Grid.RowDefinitions>
+
+			<Border
+				Grid.RowSpan="2"
+				Margin="-42,0,0,0"
+				Background="{DynamicResource MaterialDesignBackground}"
+				CornerRadius="6"
+				IsHitTestVisible="False">
+				<Border.BitmapEffect>
+					<DropShadowBitmapEffect ShadowDepth="0" />
+				</Border.BitmapEffect>
+			</Border>
 
 			<StackPanel
 				Grid.Row="0"
@@ -301,6 +312,171 @@
 			</ToolBar>
 		</Grid>
 
+
+
+		<Grid
+			Grid.Row="0"
+			Grid.Column="2"
+			Margin="20,8,0,0"
+			HorizontalAlignment="Center"
+			VerticalAlignment="Top">
+
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition />
+			</Grid.ColumnDefinitions>
+
+			<Grid.ToolTip>
+				<StackPanel Orientation="Vertical">
+					<XivToolsWpf:TextBlock
+						Key="Pose_Toggle"
+						Margin="0"
+						Padding="0" />
+					<XivToolsWpf:TextBlock
+						Key="Pose_WarningNotGPose"
+						Margin="0"
+						Padding="0"
+						Visibility="{Binding Services.Gpose.IsGpose, Converter={StaticResource !B2V}}" />
+				</StackPanel>
+			</Grid.ToolTip>
+
+			<Border
+				Grid.ColumnSpan="2"
+				Background="{DynamicResource MaterialDesignBackground}"
+				CornerRadius="6"
+				IsHitTestVisible="False">
+				<Border.BitmapEffect>
+					<DropShadowBitmapEffect ShadowDepth="0" />
+				</Border.BitmapEffect>
+			</Border>
+
+			<ToggleButton
+				Grid.Column="0"
+				Margin="3"
+				IsChecked="{Binding Services.Pose.IsEnabled}"
+				IsEnabled="{Binding Services.Gpose.IsGpose}"
+				Style="{DynamicResource OutlineToggleButton}">
+
+				<Grid
+					Margin="6"
+					VerticalAlignment="Center">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition />
+						<ColumnDefinition />
+					</Grid.ColumnDefinitions>
+
+					<XivToolsWpf:IconBlock
+						Margin="6,0"
+						FontSize="18"
+						Icon="Running" />
+
+					<XivToolsWpf:TextBlock
+						Grid.Column="1"
+						Margin="6,2,6,0"
+						Text="Pose" />
+				</Grid>
+
+
+			</ToggleButton>
+
+			<StackPanel
+				Grid.Column="1"
+				VerticalAlignment="Center"
+				Orientation="Horizontal"
+				Visibility="{Binding Services.Pose.IsEnabled, Converter={StaticResource B2V}}">
+
+				<CheckBox
+					Margin="3,0,6,0"
+					VerticalContentAlignment="Center"
+					IsChecked="{Binding Services.Pose.FreezePhysics}"
+					IsEnabled="{Binding Services.Pose.IsEnabled}">
+					<XivToolsWpf:TextBlock Key="Pose_FreezePhysics" />
+				</CheckBox>
+
+				<CheckBox
+					Margin="3,0,6,0"
+					VerticalContentAlignment="Center"
+					IsChecked="{Binding Services.Pose.EnableParenting}"
+					IsEnabled="{Binding Services.Pose.IsEnabled}">
+					<XivToolsWpf:TextBlock Key="Pose_Parenting" />
+				</CheckBox>
+
+				<Border
+					Margin="2,2,5,2"
+					Padding="3"
+					HorizontalAlignment="Right"
+					Background="{DynamicResource AttentionToActionBrush}"
+					CornerRadius="6">
+					<Grid>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition />
+							<ColumnDefinition />
+							<ColumnDefinition />
+						</Grid.ColumnDefinitions>
+
+						<Grid.RowDefinitions>
+							<RowDefinition />
+							<RowDefinition Height="Auto" />
+						</Grid.RowDefinitions>
+
+						<XivToolsWpf:TextBlock
+							Grid.ColumnSpan="3"
+							Margin="2,0,0,0"
+							FontSize="10"
+							Text="Edit Mode:" />
+
+						<CheckBox
+							Grid.Row="1"
+							Grid.Column="0"
+							Margin="3,0"
+							VerticalContentAlignment="Center"
+							IsChecked="{Binding Services.Pose.FreezeRotation}"
+							IsEnabled="{Binding Services.Pose.IsEnabled}">
+							<XivToolsWpf:TextBlock
+								Key="Pose_EnableRotation"
+								Margin="0,-2,0,2" />
+
+							<CheckBox.ToolTip>
+								<XivToolsWpf:TextBlock Key="Pose_EnableRotationTooltip" />
+							</CheckBox.ToolTip>
+						</CheckBox>
+
+						<CheckBox
+							Grid.Row="1"
+							Grid.Column="1"
+							Margin="3,0"
+							VerticalContentAlignment="Center"
+							IsChecked="{Binding Services.Pose.FreezePositions}"
+							IsEnabled="{Binding Services.Pose.IsEnabled}">
+							<XivToolsWpf:TextBlock
+								Key="Pose_EnablePosition"
+								Margin="0,-2,0,2" />
+
+							<CheckBox.ToolTip>
+								<XivToolsWpf:TextBlock Key="Pose_EnablePositionTooltip" />
+							</CheckBox.ToolTip>
+						</CheckBox>
+
+						<CheckBox
+							Grid.Row="1"
+							Grid.Column="2"
+							Margin="3,0"
+							VerticalContentAlignment="Center"
+							IsChecked="{Binding Services.Pose.FreezeScale}"
+							IsEnabled="{Binding Services.Pose.IsEnabled}">
+							<XivToolsWpf:TextBlock
+								Key="Pose_EnableScale"
+								Margin="0,-2,0,2" />
+
+							<CheckBox.ToolTip>
+								<XivToolsWpf:TextBlock Key="Pose_EnableScaleTooltip" />
+							</CheckBox.ToolTip>
+						</CheckBox>
+					</Grid>
+				</Border>
+			</StackPanel>
+
+		</Grid>
 
 
 		<Image

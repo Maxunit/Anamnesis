@@ -328,6 +328,7 @@
 	"Character_Action_GlobalFreezeWorldPositionsTooltip": "Freeze Actor/Camera World Positions",
 	"Character_Action_GlobalSpeedControl": "Speed Control",
 	"Character_Action_LinkSpeed": "Link speed control for all animation slots",
+	"Pose_Toggle": "Toggle posing mode on or off.",
 	"Pose_WarningNotGPose": "Posing is only available while in Group Pose. Type /gpose in chat.",
 	"Pose_WarningNotFrozen": "Actor motion must be disabled in the Group Pose settings, or Freeze Positions must be enabled in the pose options.",
 	"Pose_WarningQuit": "Are you sure you want to quit? Current pose will be lost.",
@@ -361,11 +362,11 @@
 	"Pose_Linked": "Linked Bones",
 	"Pose_Linked_Tooltip": "Linked bones will be moved in relation to the current bone",
 
-	"Pose_EnableRotation": "R",
+	"Pose_EnableRotation": "Rot",
 	"Pose_EnableRotationTooltip": "Enable editing rotation",
-	"Pose_EnableScale": "S",
+	"Pose_EnableScale": "Scale",
 	"Pose_EnableScaleTooltip": "Enable editing scale",
-	"Pose_EnablePosition": "P",
+	"Pose_EnablePosition": "Pos",
 	"Pose_EnablePositionTooltip": "Enable editing positions",
 
 	"Pose_Matrix_HeadCategory": "Head",

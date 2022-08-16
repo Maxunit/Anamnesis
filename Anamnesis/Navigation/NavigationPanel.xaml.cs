@@ -42,12 +42,21 @@ public partial class NavigationPanel : PanelBase
 		return new Point(this.BackgroundBorder.ActualWidth + 12, this.TopBar.ActualHeight + 12);
 	}
 
-	private void OnIconMouseDown(object sender, MouseButtonEventArgs e)
+	private async void OnIconMouseDown(object sender, MouseButtonEventArgs e)
 	{
-		if (e.LeftButton != MouseButtonState.Pressed)
-			return;
-
-		this.DragMove();
+		if (e.LeftButton == MouseButtonState.Pressed)
+		{
+			this.DragMove();
+		}
+		else if (e.RightButton == MouseButtonState.Pressed)
+		{
+			bool? result = await GenericDialogPanel.ShowLocalizedAsync("Pose_WarningQuit", "Common_Confirm", MessageBoxButton.YesNo);
+			if (result == true)
+			{
+				this.Close();
+				Application.Current.Shutdown();
+			}
+		}
 	}
 
 	private void OnActorEntryExpanded(object sender, RoutedEventArgs e)
