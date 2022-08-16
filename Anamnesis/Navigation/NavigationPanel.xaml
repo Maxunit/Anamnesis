@@ -382,8 +382,59 @@
 			<StackPanel
 				Grid.Column="1"
 				VerticalAlignment="Center"
-				Orientation="Horizontal"
-				Visibility="{Binding Services.Pose.IsEnabled, Converter={StaticResource B2V}}">
+				Orientation="Horizontal">
+
+				<StackPanel.Style>
+					<Style TargetType="{x:Type StackPanel}">
+
+						<Setter Property="LayoutTransform">
+							<Setter.Value>
+								<ScaleTransform ScaleX="0" />
+							</Setter.Value>
+						</Setter>
+
+						<Style.Triggers>
+							<DataTrigger
+								Binding="{Binding Services.Pose.IsEnabled}"
+								Value="True">
+								<DataTrigger.EnterActions>
+									<StopStoryboard BeginStoryboardName="CloseStoryboard" />
+									<BeginStoryboard x:Name="OpenStoryboard">
+										<Storyboard>
+											<DoubleAnimation
+												EasingFunction="{StaticResource SinEaseOut}"
+												Storyboard.TargetProperty="Opacity"
+												To="1"
+												Duration="0:0:0.200" />
+											<DoubleAnimation
+												EasingFunction="{StaticResource SinEaseOut}"
+												Storyboard.TargetProperty="LayoutTransform.(ScaleTransform.ScaleX)"
+												To="1"
+												Duration="0:0:0.200" />
+										</Storyboard>
+									</BeginStoryboard>
+								</DataTrigger.EnterActions>
+								<DataTrigger.ExitActions>
+									<StopStoryboard BeginStoryboardName="OpenStoryboard" />
+									<BeginStoryboard x:Name="CloseStoryboard">
+										<Storyboard>
+											<DoubleAnimation
+												EasingFunction="{StaticResource SinEaseIn}"
+												Storyboard.TargetProperty="Opacity"
+												To="0"
+												Duration="0:0:0.200" />
+											<DoubleAnimation
+												EasingFunction="{StaticResource SinEaseIn}"
+												Storyboard.TargetProperty="LayoutTransform.(ScaleTransform.ScaleX)"
+												To="0"
+												Duration="0:0:0.200" />
+										</Storyboard>
+									</BeginStoryboard>
+								</DataTrigger.ExitActions>
+							</DataTrigger>
+						</Style.Triggers>
+					</Style>
+				</StackPanel.Style>
 
 				<CheckBox
 					Margin="3,0,6,0"

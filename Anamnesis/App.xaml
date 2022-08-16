@@ -78,6 +78,13 @@
 				</Style.Triggers>
 			</Style>
 
+			<SineEase
+				x:Key="SinEaseIn"
+				EasingMode="EaseIn" />
+			<SineEase
+				x:Key="SinEaseOut"
+				EasingMode="EaseOut" />
+
 		</ResourceDictionary>
 	</Application.Resources>
 </Application>
