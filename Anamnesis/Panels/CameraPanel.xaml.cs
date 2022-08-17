@@ -14,7 +14,7 @@ public partial class CameraPanel : PanelBase
 	private static DirectoryInfo? lastLoadDir;
 	private static DirectoryInfo? lastSaveDir;
 
-	public CameraPanel(IPanelGroupHost host)
+	public CameraPanel(IPanelHost host)
 		: base(host)
 	{
 		this.InitializeComponent();

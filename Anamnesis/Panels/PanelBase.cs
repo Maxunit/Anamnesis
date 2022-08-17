@@ -8,6 +8,7 @@ using FontAwesome.Sharp;
 using Serilog;
 using System;
 using System.ComponentModel;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,9 +18,9 @@ using XivToolsWpf.DependencyProperties;
 
 public abstract class PanelBase : UserControl, IPanel, INotifyPropertyChanged
 {
-	public static readonly IBind<string?> TitleDp = Binder.Register<string?, PanelBase>(nameof(Title), OnTitleChanged, BindMode.OneWay);
+	public static readonly IBind<string?> TitleDp = Binder.Register<string?, PanelBase>(nameof(Title), BindMode.OneWay);
 
-	public PanelBase(IPanelGroupHost host)
+	public PanelBase(IPanelHost host)
 	{
 		this.Host = host;
 	}
@@ -27,76 +28,46 @@ public abstract class PanelBase : UserControl, IPanel, INotifyPropertyChanged
 	public event PropertyChangedEventHandler? PropertyChanged;
 
 	public ServiceManager Services => App.Services;
-	public IPanelGroupHost Host { get; set; }
-	public bool IsOpen => this.Host.IsOpen;
-
+	public IPanelHost Host { get; set; }
+	public bool IsOpen { get; private set; } = true;
 	public virtual string Id => this.GetType().ToString();
+	public string? TitleKey { get; set; }
+	public string? Title { get; set; }
+	public IconChar Icon { get; set; }
+	public Rect Rect => this.Host.Rect;
+	public bool ShowBackground { get; set; } = true;
+	public bool CanResize { get; set; }
+	public Color? TitleColor { get; set; } = Colors.Gray;
 
-	public string? TitleKey
+	public string FinalTitle
 	{
-		get => this.Host.TitleKey;
-		set => this.Host.TitleKey = value;
-	}
+		get
+		{
+			StringBuilder sb = new();
 
-	public string? Title
-	{
-		get => TitleDp.Get(this);
-		set => TitleDp.Set(this, value);
-	}
+			if (this.TitleKey != null)
+				sb.Append(LocalizationService.GetString(this.TitleKey, true));
 
-	public IconChar Icon
-	{
-		get => this.Host.Icon;
-		set => this.Host.Icon = value;
-	}
+			if (this.TitleKey != null && this.Title != null)
+				sb.Append(" ");
 
-	public Rect Rect
-	{
-		get => this.Host.Rect;
-		set => this.Host.Rect = value;
-	}
+			if (this.Title != null)
+				sb.Append(this.Title);
 
-	public Rect RelativeRect
-	{
-		get => this.Host.RelativeRect;
-		set => this.Host.RelativeRect = value;
-	}
-
-	public bool ShowBackground
-	{
-		get => this.Host.ShowBackground;
-		set => this.Host.ShowBackground = value;
-	}
-
-	public bool Topmost
-	{
-		get => this.Host.Topmost;
-		set => this.Host.Topmost = value;
-	}
-
-	public bool CanResize
-	{
-		get => this.Host.CanResize;
-		set => this.Host.CanResize = value;
-	}
-
-	public Color? TitleColor
-	{
-		get => this.Host.TitleColor;
-		set => this.Host.TitleColor = value;
+			return sb.ToString();
+		}
 	}
 
 	protected ILogger Log => Serilog.Log.ForContext(this.GetType());
 
 	public void DragMove() => this.Host.DragMove();
 
-	public virtual Point GetSubPanelDockOffset()
+	public void Close()
 	{
-		return new(this.Rect.Width, 0);
+		this.Host.RemovePanel(this);
+		this.IsOpen = false;
+		PanelService.OnPanelClosed(this);
 	}
-
-	public void SetParent(IPanel other) => other.Host.AddChild(this);
-	public void Close() => this.Host.Close();
 
 	public async Task WhileOpen()
 	{
@@ -106,10 +77,5 @@ public abstract class PanelBase : UserControl, IPanel, INotifyPropertyChanged
 		{
 			await Task.Delay(500);
 		}
-	}
-
-	private static void OnTitleChanged(PanelBase sender, string? value)
-	{
-		sender.Host.Title = value;
 	}
 }

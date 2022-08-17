@@ -8,6 +8,7 @@ using Anamnesis.Panels;
 using System;
 using System.Collections.Generic;
 using System.Windows;
+using static Anamnesis.Navigation.NavigationService;
 
 public class NavigationService : ServiceBase<NavigationService>
 {

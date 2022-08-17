@@ -165,6 +165,8 @@
 	"Naviagation_Actor_Action_Tip": "Play animations",
 	"Naviagation_Actor_Pose": "Pose",
 	"Naviagation_Actor_Pose_Tip": "Pose your actor",
+	"Naviagation_Actor_Transform": "Transform",
+	"Naviagation_Actor_Transform_Tip": "Edit selected bones",
 
 	"OverlayWindow_AutoClose": "Auto close",
 	"OverlayWindow_PopOut": "Pop-out",

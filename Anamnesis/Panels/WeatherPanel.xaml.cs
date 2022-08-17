@@ -14,7 +14,7 @@ public partial class WeatherPanel : PanelBase
 {
 	private static readonly WeatherFilter FilterInstance = new();
 
-	public WeatherPanel(IPanelGroupHost host)
+	public WeatherPanel(IPanelHost host)
 		: base(host)
 	{
 		this.InitializeComponent();
@@ -22,11 +22,6 @@ public partial class WeatherPanel : PanelBase
 	}
 
 	public WeatherFilter Filter => FilterInstance;
-
-	public override Point GetSubPanelDockOffset()
-	{
-		return new(0, this.Rect.Height - 6);
-	}
 
 	protected Task LoadItems()
 	{

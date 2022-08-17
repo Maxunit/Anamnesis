@@ -12,7 +12,7 @@ using XivToolsWpf.Extensions;
 
 public partial class ImportPosePanel : PanelBase
 {
-	public ImportPosePanel(IPanelGroupHost host, OpenResult openFile)
+	public ImportPosePanel(IPanelHost host, OpenResult openFile)
 		: base(host)
 	{
 		this.InitializeComponent();

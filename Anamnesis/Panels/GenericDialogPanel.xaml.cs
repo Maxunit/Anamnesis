@@ -12,7 +12,7 @@ using XivToolsWpf;
 
 public partial class GenericDialogPanel : PanelBase
 {
-	public GenericDialogPanel(IPanelGroupHost host, DialogInfo info)
+	public GenericDialogPanel(IPanelHost host, DialogInfo info)
 		: base(host)
 	{
 		this.InitializeComponent();

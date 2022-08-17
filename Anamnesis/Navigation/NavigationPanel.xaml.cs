@@ -15,29 +15,14 @@ using Anamnesis.Files;
 [AddINotifyPropertyChangedInterface]
 public partial class NavigationPanel : PanelBase
 {
-	private bool expanded = true;
-
-	public NavigationPanel(IPanelGroupHost host)
+	public NavigationPanel(IPanelHost host)
 		: base(host)
 	{
 		this.InitializeComponent();
 		this.ContentArea.DataContext = this;
 	}
 
-	public bool Expanded
-	{
-		get => this.expanded;
-		set
-		{
-			this.expanded = value;
-			this.Host.TitleKey = value ? "        Anamnesis" : string.Empty;
-		}
-	}
-
-	public override Point GetSubPanelDockOffset()
-	{
-		return new Point(this.BackgroundBorder.ActualWidth + 12, this.TopBar.ActualHeight + 12);
-	}
+	public bool Expanded { get; set; } = true;
 
 	private async void OnIconMouseDown(object sender, MouseButtonEventArgs e)
 	{

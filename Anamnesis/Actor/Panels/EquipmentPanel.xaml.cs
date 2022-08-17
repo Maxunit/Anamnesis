@@ -14,7 +14,7 @@ using System.Windows;
 /// </summary>
 public partial class EquipmentPanel : ActorPanelBase
 {
-	public EquipmentPanel(IPanelGroupHost host)
+	public EquipmentPanel(IPanelHost host)
 		: base(host)
 	{
 		this.InitializeComponent();

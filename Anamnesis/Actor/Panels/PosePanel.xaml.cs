@@ -33,9 +33,7 @@ public partial class PosePanel : ActorPanelBase
 	private bool isDragging;
 	private Point origMouseDownPoint;
 
-	private Task? writeSkeletonTask;
-
-	public PosePanel(IPanelGroupHost host)
+	public PosePanel(IPanelHost host)
 		: base(host)
 	{
 		this.InitializeComponent();
@@ -43,6 +41,7 @@ public partial class PosePanel : ActorPanelBase
 		this.ContentArea.DataContext = this;
 
 		HistoryService.OnHistoryApplied += this.OnHistoryApplied;
+		PoseService.EnabledChanged += this.OnPoseServiceEnabledChanged;
 	}
 
 	public SkeletonVisual3d? Skeleton { get; private set; }
@@ -69,27 +68,24 @@ public partial class PosePanel : ActorPanelBase
 		this.BoneViews.Clear();
 
 		if (this.Actor == null || this.Actor.ModelObject == null)
-		{
-			this.Skeleton?.Clear();
-			this.Skeleton = null;
 			return;
-		}
 
 		try
 		{
-			if (this.Skeleton == null)
-				this.Skeleton = new SkeletonVisual3d();
-
-			await this.Skeleton.SetActor(this.Actor);
-
-			if (this.writeSkeletonTask == null || this.writeSkeletonTask.IsCompleted)
-			{
-				this.writeSkeletonTask = Task.Run(this.WriteSkeletonThread);
-			}
+			this.Skeleton = await this.Services.Pose.GetSkeleton(this.Actor);
 		}
 		catch (Exception ex)
 		{
-			this.Log.Error(ex, "Failed to bind skeleton to view");
+			this.Log.Error(ex, "Failed to set skeleton to pose panel");
+			this.Skeleton = null;
+		}
+	}
+
+	private void OnPoseServiceEnabledChanged(bool value)
+	{
+		if (!value)
+		{
+			this.Close();
 		}
 	}
 
@@ -163,7 +159,6 @@ public partial class PosePanel : ActorPanelBase
 
 	private void OnLoaded(object sender, RoutedEventArgs e)
 	{
-		PoseService.EnabledChanged += this.OnPoseServiceEnabledChanged;
 		this.Services.Pose.PropertyChanged += this.PoseService_PropertyChanged;
 	}
 
@@ -177,21 +172,6 @@ public partial class PosePanel : ActorPanelBase
 			this.Skeleton?.Reselect();
 			this.Skeleton?.ReadTranforms();
 		});
-	}
-
-	private void OnPoseServiceEnabledChanged(bool value)
-	{
-		if (!value)
-		{
-			this.OnClearClicked(null, null);
-		}
-		else
-		{
-			Application.Current?.Dispatcher.Invoke(() =>
-			{
-				this.Skeleton?.ReadTranforms();
-			});
-		}
 	}
 
 	/*private async void OnImportClicked(object sender, RoutedEventArgs e)
@@ -340,11 +320,6 @@ public partial class PosePanel : ActorPanelBase
 		this.GuiView.Visibility = selected == 0 ? Visibility.Visible : Visibility.Collapsed;
 		this.MatrixView.Visibility = selected == 1 ? Visibility.Visible : Visibility.Collapsed;
 		this.ThreeDView.Visibility = selected == 2 ? Visibility.Visible : Visibility.Collapsed;
-	}
-
-	private void OnClearClicked(object? sender, RoutedEventArgs? e)
-	{
-		this.Skeleton?.ClearSelection();
 	}
 
 	private void OnSelectChildrenClicked(object sender, RoutedEventArgs e)
@@ -536,21 +511,5 @@ public partial class PosePanel : ActorPanelBase
 	private void OnHistoryApplied()
 	{
 		this.Skeleton?.CurrentBone?.ReadTransform();
-	}
-
-	private async Task WriteSkeletonThread()
-	{
-		while (Application.Current != null && this.Skeleton != null)
-		{
-			await Dispatch.MainThread();
-
-			if (this.Skeleton == null)
-				return;
-
-			this.Skeleton.WriteSkeleton();
-
-			// up to 60 times a second
-			await Task.Delay(16);
-		}
 	}
 }

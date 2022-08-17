@@ -11,7 +11,7 @@ using XivToolsWpf.Extensions;
 
 public partial class ImportCharacterPanel : PanelBase
 {
-	public ImportCharacterPanel(IPanelGroupHost host, OpenResult openFile)
+	public ImportCharacterPanel(IPanelHost host, OpenResult openFile)
 		: base(host)
 	{
 		this.InitializeComponent();

@@ -20,23 +20,21 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using XivToolsWpf;
 
 using MediaColor = System.Windows.Media.Color;
 
 [AddINotifyPropertyChangedInterface]
-public partial class FloatingWindow : Window, IPanelGroupHost
+public partial class FloatingWindow : Window, IPanelHost
 {
 	private readonly WindowInteropHelper windowInteropHelper;
-	private readonly List<IPanelGroupHost> children = new();
+	private readonly List<IPanel> panels = new();
 
-	private string? titleKey;
-	private string? titleText;
-
-	private IconChar icon;
 	private bool canResize = true;
 	private bool playOpenAnimation = true;
 	private bool isOpeningAnimation = true;
@@ -52,45 +50,11 @@ public partial class FloatingWindow : Window, IPanelGroupHost
 		this.TitleColor = Application.Current.Resources.GetTheme().ToolForeground;
 	}
 
-	// TODO: should be a combination of all child ids?
-	public string Id => ((IPanel)this.PanelGroupArea.Content).Id;
-
-	public IPanelGroupHost? ParentHost { get; set; }
 	public ContentPresenter PanelGroupArea => this.ContentPresenter;
 	public bool ShowBackground { get; set; } = true;
 	public bool IsOpen { get; private set; }
 
-	public IEnumerable<IPanelGroupHost> Children => this.children;
-
-	public string? TitleKey
-	{
-		get => this.titleKey;
-		set
-		{
-			this.titleKey = value;
-			this.UpdateTitle();
-		}
-	}
-
-	public new string? Title
-	{
-		get => this.titleText;
-		set
-		{
-			this.titleText = value;
-			this.UpdateTitle();
-		}
-	}
-
-	public new IconChar Icon
-	{
-		get => this.icon;
-		set
-		{
-			this.icon = value;
-			this.TitleIcon.Icon = value;
-		}
-	}
+	public IEnumerable<IPanel> Panels => this.panels.AsReadOnly();
 
 	public new bool Topmost
 	{
@@ -134,6 +98,20 @@ public partial class FloatingWindow : Window, IPanelGroupHost
 		}
 	}
 
+	public string Id
+	{
+		get
+		{
+			StringBuilder sb = new();
+			foreach (IPanel panel in this.panels)
+			{
+				sb.Append(panel.Id);
+			}
+
+			return sb.ToString();
+		}
+	}
+
 	public virtual Rect ScreenRect
 	{
 		get
@@ -143,7 +121,7 @@ public partial class FloatingWindow : Window, IPanelGroupHost
 		}
 	}
 
-	public IPanelGroupHost Host => this;
+	public IPanelHost Host => this;
 	public MediaColor? TitleColor { get; set; }
 	public virtual bool CanPopOut => false;
 	public virtual bool CanPopIn => true;
@@ -160,8 +138,6 @@ public partial class FloatingWindow : Window, IPanelGroupHost
 			value.Y = (pos.Y - screen.Y) / (screen.Height - pos.Height);
 			value.Width = pos.Width;
 			value.Height = pos.Height;
-
-			Log.Information("< " + value);
 
 			return value;
 		}
@@ -206,15 +182,15 @@ public partial class FloatingWindow : Window, IPanelGroupHost
 		this.IsOpen = true;
 	}
 
-	public virtual void Show(IPanelGroupHost copy)
+	public virtual void Show(IPanelHost copy)
 	{
-		this.PanelGroupArea.Content = copy.PanelGroupArea.Content;
-
-		if (this.PanelGroupArea.Content is PanelBase panel)
-			panel.Host = this;
-
 		this.playOpenAnimation = false;
 		this.Show();
+
+		throw new NotImplementedException();
+
+		/*if (this.PanelGroupArea.Content is PanelBase panel)
+			panel.Host = this;
 
 		this.TitleKey = copy.TitleKey;
 		this.Title = copy.Title;
@@ -229,19 +205,28 @@ public partial class FloatingWindow : Window, IPanelGroupHost
 			this.AutoClose = wnd.AutoClose;
 		}
 
-		this.Rect = copy.Rect;
+		this.Rect = copy.Rect;*/
 	}
 
-	public void AddChild(IPanel panel)
+	public void AddPanel(IPanel panel)
 	{
-		panel.Host.ParentHost = this;
-		this.children.Add(panel.Host);
+		// TODO: panel docking.
+		this.PanelGroupArea.Content = panel as PanelBase;
+
+		this.panels.Add(panel);
+		panel.PropertyChanged += this.OnPanelPropertyChanged;
+		this.OnPanelPropertyChanged(this, null);
 	}
 
-	public void RemoveChild(IPanel panel)
+	public void RemovePanel(IPanel panel)
 	{
-		this.children.Remove(panel.Host);
-		panel.Host.ParentHost = null;
+		panel.PropertyChanged -= this.OnPanelPropertyChanged;
+		this.panels.Remove(panel);
+
+		if (this.panels.Count <= 0)
+		{
+			this.Close();
+		}
 	}
 
 	public new void Close()
@@ -261,58 +246,14 @@ public partial class FloatingWindow : Window, IPanelGroupHost
 	{
 	}
 
-	protected override async void OnDeactivated(EventArgs e)
+	protected override void OnDeactivated(EventArgs e)
 	{
 		base.OnDeactivated(e);
 
 		if (this.AutoClose)
 		{
-			// If we have docked panels that are active,
-			// then we dont close yet.
-			foreach (IPanel docked in this.children)
-			{
-				if (docked.Host.IsVisible)
-				{
-					return;
-				}
-			}
-
 			this.Close();
-
-			if (this.ParentHost != null)
-			{
-				this.ParentHost.RemoveChild(this);
-
-				// wait a moment to see if the parent is actually being focused
-				await Task.Delay(250);
-				await Dispatch.MainThread();
-
-				if (this.ParentHost is FloatingWindow wnd)
-				{
-					if (!wnd.IsActive)
-					{
-						wnd.OnDeactivated(e);
-					}
-				}
-			}
 		}
-	}
-
-	private void UpdateTitle()
-	{
-		StringBuilder sb = new();
-
-		if (this.titleKey != null)
-			sb.Append(LocalizationService.GetString(this.titleKey, true));
-
-		if (this.titleKey != null && this.titleText != null)
-			sb.Append(" ");
-
-		if (this.titleText != null)
-			sb.Append(this.titleText);
-
-		base.Title = sb.ToString();
-		this.TitleText.Text = base.Title;
 	}
 
 	private void OnWindowLoaded(object sender, RoutedEventArgs e)
@@ -396,5 +337,30 @@ public partial class FloatingWindow : Window, IPanelGroupHost
 		OverlayWindow wnd = new();
 		wnd.Show(this);
 		base.Close();
+	}
+
+	private void OnPanelPropertyChanged(object? sender, PropertyChangedEventArgs? e = null)
+	{
+		if (this.panels.Count <= 0)
+			throw new Exception("Panel host reciving panel events without any panel children");
+
+		if (this.panels.Count == 1)
+		{
+			this.ShowBackground = this.panels[0].ShowBackground;
+			this.CanResize = this.panels[0].CanResize;
+			this.TitleIcon.Icon = this.panels[0].Icon;
+			this.TitleColor = this.panels[0].TitleColor;
+			this.Title = this.panels[0].FinalTitle;
+			this.TitleText.Text = this.Title;
+		}
+		else
+		{
+			this.ShowBackground = true;
+			this.CanResize = true;
+			this.TitleIcon.Icon = IconChar.None;
+			this.TitleColor = Colors.White;
+			this.Title = string.Empty;
+			this.TitleText.Text = string.Empty;
+		}
 	}
 }

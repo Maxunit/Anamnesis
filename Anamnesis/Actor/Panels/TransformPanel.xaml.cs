@@ -6,21 +6,43 @@ namespace Anamnesis.Actor.Panels;
 using Anamnesis.Memory;
 using Anamnesis.Panels;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Media3D;
 
 using CmQuaternion = Anamnesis.Memory.Quaternion;
 
-public partial class TransformPanel : PanelBase
+public partial class TransformPanel : ActorPanelBase
 {
-	public TransformPanel(IPanelGroupHost host)
+	public TransformPanel(IPanelHost host)
 		: base(host)
 	{
 		this.InitializeComponent();
+		this.ContentArea.DataContext = this;
+
+		PoseService.EnabledChanged += this.OnPoseServiceEnabledChanged;
 	}
 
 	public bool IsFlipping { get; private set; }
-	public SkeletonVisual3d? Skeleton => this.DataContext as SkeletonVisual3d;
+	public SkeletonVisual3d? Skeleton { get; private set; }
+
+	protected override async Task OnActorChanged()
+	{
+		await base.OnActorChanged();
+
+		if (this.Actor == null)
+			return;
+
+		this.Skeleton = await this.Services.Pose.GetSkeleton(this.Actor);
+	}
+
+	private void OnPoseServiceEnabledChanged(bool value)
+	{
+		if (!value)
+		{
+			this.Close();
+		}
+	}
 
 	private void OnParentClicked(object sender, RoutedEventArgs e)
 	{
@@ -42,6 +64,11 @@ public partial class TransformPanel : PanelBase
 		}
 
 		this.Skeleton.Select(bones, SkeletonVisual3d.SelectMode.Add);
+	}
+
+	private void OnClearClicked(object? sender, RoutedEventArgs? e)
+	{
+		this.Skeleton?.ClearSelection();
 	}
 
 	private void OnFlipClicked(object sender, RoutedEventArgs e)

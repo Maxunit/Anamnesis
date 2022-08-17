@@ -31,7 +31,7 @@ public partial class EquipmentSelectorPanel : PanelBase
 
 	private readonly Memory.ActorMemory? actor;
 
-	public EquipmentSelectorPanel(IPanelGroupHost host, ItemSlots slot, ActorMemory? actor)
+	public EquipmentSelectorPanel(IPanelHost host, ItemSlots slot, ActorMemory? actor)
 		: base(host)
 	{
 		this.Slot = slot;

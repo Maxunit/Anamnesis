@@ -11,7 +11,7 @@ using XivToolsWpf.Extensions;
 
 public abstract class ActorPanelBase : PanelBase
 {
-	protected ActorPanelBase(IPanelGroupHost host)
+	protected ActorPanelBase(IPanelHost host)
 		: base(host)
 	{
 		this.Services.Target.ActorSelected += this.OnActorSelected;

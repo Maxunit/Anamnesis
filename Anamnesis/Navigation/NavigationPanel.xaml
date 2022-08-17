@@ -10,7 +10,6 @@
 	xmlns:panels="clr-namespace:Anamnesis.Panels"
 	CanResize="False"
 	ShowBackground="False"
-	Topmost="True"
 	mc:Ignorable="d">
 
 	<panels:PanelBase.Resources>
@@ -181,19 +180,21 @@
 					ShowText="{Binding Expanded}"
 					ToolTipKey="Naviagation_Actor_Info_Tip" />
 
-				<local:Shortcut
-					Destination="ActorCustomize"
-					Icon="IdCardAlt"
-					LabelKey="Naviagation_Actor_Customize"
-					ShowText="{Binding Expanded}"
-					ToolTipKey="Naviagation_Actor_Customize_Tip" />
+				<StackPanel Visibility="{Binding Services.Pose.IsEnabled, Converter={StaticResource !B2V}}">
+					<local:Shortcut
+						Destination="ActorCustomize"
+						Icon="IdCardAlt"
+						LabelKey="Naviagation_Actor_Customize"
+						ShowText="{Binding Expanded}"
+						ToolTipKey="Naviagation_Actor_Customize_Tip" />
 
-				<local:Shortcut
-					Destination="ActorEquipment"
-					Icon="HatCowboy"
-					LabelKey="Naviagation_Actor_Equipment"
-					ShowText="{Binding Expanded}"
-					ToolTipKey="Naviagation_Actor_Equipment_Tip" />
+					<local:Shortcut
+						Destination="ActorEquipment"
+						Icon="HatCowboy"
+						LabelKey="Naviagation_Actor_Equipment"
+						ShowText="{Binding Expanded}"
+						ToolTipKey="Naviagation_Actor_Equipment_Tip" />
+				</StackPanel>
 
 				<!--<local:Shortcut
 					Destination="Action"
@@ -202,12 +203,21 @@
 					ShowText="{Binding ShowText}"
 					ToolTipKey="Naviagation_Actor_Action_Tip" />-->
 
-				<local:Shortcut
-					Destination="Pose"
-					Icon="Running"
-					LabelKey="Naviagation_Actor_Pose"
-					ShowText="{Binding Expanded}"
-					ToolTipKey="Naviagation_Actor_Pose_Tip" />
+				<StackPanel Visibility="{Binding Services.Pose.IsEnabled, Converter={StaticResource B2V}}">
+					<local:Shortcut
+						Destination="Pose"
+						Icon="Running"
+						LabelKey="Naviagation_Actor_Pose"
+						ShowText="{Binding Expanded}"
+						ToolTipKey="Naviagation_Actor_Pose_Tip" />
+
+					<local:Shortcut
+						Destination="Transform"
+						Icon="Circle"
+						LabelKey="Naviagation_Actor_Transform"
+						ShowText="{Binding Expanded}"
+						ToolTipKey="Naviagation_Actor_Transform_Tip" />
+				</StackPanel>
 
 			</StackPanel>
 		</Grid>

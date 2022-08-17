@@ -11,7 +11,7 @@ using System.Windows.Data;
 
 public partial class ActorInfoPanel : ActorPanelBase
 {
-	public ActorInfoPanel(IPanelGroupHost host)
+	public ActorInfoPanel(IPanelHost host)
 		: base(host)
 	{
 		this.InitializeComponent();

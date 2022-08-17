@@ -19,7 +19,7 @@ using Anamnesis.Services;
 
 public partial class SettingsPanel : PanelBase
 {
-	public SettingsPanel(IPanelGroupHost host)
+	public SettingsPanel(IPanelHost host)
 		: base(host)
 	{
 		this.InitializeComponent();

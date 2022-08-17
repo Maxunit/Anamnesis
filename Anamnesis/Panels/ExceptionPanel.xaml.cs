@@ -13,7 +13,7 @@ using System.Windows.Media;
 
 public partial class ExceptionPanel : PanelBase
 {
-	public ExceptionPanel(IPanelGroupHost host, ErrorInfo data)
+	public ExceptionPanel(IPanelHost host, ErrorInfo data)
 		: base(host)
 	{
 		this.InitializeComponent();

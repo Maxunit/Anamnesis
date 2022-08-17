@@ -8,7 +8,7 @@ using Anamnesis.Panels;
 
 public partial class CustomizePanel : ActorPanelBase
 {
-	public CustomizePanel(IPanelGroupHost host)
+	public CustomizePanel(IPanelHost host)
 		: base(host)
 	{
 		this.InitializeComponent();
