@@ -362,6 +362,19 @@
 					</Grid>
 				</Popup>-->
 
+				<!--  Verbose Logging  -->
+				<ToggleButton
+					Width="28"
+					Height="28"
+					IsChecked="{Binding Services.Logs.VerboseLogging}"
+					Style="{DynamicResource TransparentIconToggleButton}"
+					ToolTip="Enable verbose logging"
+					Visibility="{Binding Services.IsDebug, Converter={StaticResource B2V}}">
+					<XivToolsWpf:IconBlock
+						FontSize="12"
+						Icon="FileAlt" />
+				</ToggleButton>
+
 			</ToolBar>
 		</Grid>
 

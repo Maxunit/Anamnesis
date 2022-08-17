@@ -107,7 +107,8 @@
 			Grid.Row="1"
 			Grid.Column="1"
 			Margin="6"
-			Selection="{Binding Actor}" />
+			Selection="{Binding Actor}"
+			SelectionChanged="OnActorSelectionChanged" />
 
 		<Grid
 			Grid.Row="2"
@@ -131,38 +132,68 @@
 			<XivToolsWpf:FlagCheckbox
 				Grid.Row="0"
 				Grid.Column="0"
-				Margin="0,0,12,0"
 				Flag="Rotation"
 				Label="Rotation"
 				Value="{Binding Mode}" />
 			<XivToolsWpf:FlagCheckbox
 				Grid.Row="1"
 				Grid.Column="0"
-				Margin="0,0,12,0"
 				Flag="Scale"
 				Label="Scale"
 				Value="{Binding Mode}" />
 			<XivToolsWpf:FlagCheckbox
 				Grid.Row="2"
 				Grid.Column="0"
-				Margin="0,0,12,0"
 				Flag="Position"
 				Label="Position"
 				Value="{Binding Mode}" />
 			<XivToolsWpf:FlagCheckbox
 				Grid.Row="3"
 				Grid.Column="0"
-				Margin="0,0,12,0"
 				Flag="WorldRotation"
 				Label="World Rotation"
 				Value="{Binding Mode}" />
 			<XivToolsWpf:FlagCheckbox
 				Grid.Row="4"
 				Grid.Column="0"
-				Margin="0,0,12,0"
 				Flag="WorldScale"
 				Label="World Scale"
 				Value="{Binding Mode}" />
+
+			<RadioButton
+				Grid.Row="0"
+				Grid.Column="1"
+				IsChecked="{Binding Destination, Converter={StaticResource EnumToBool}, ConverterParameter=Expression}">
+				<XivToolsWpf:TextBlock Key="Pose_Expression" />
+			</RadioButton>
+
+			<RadioButton
+				Grid.Row="1"
+				Grid.Column="1"
+				IsChecked="{Binding Destination, Converter={StaticResource EnumToBool}, ConverterParameter=Body}">
+				<XivToolsWpf:TextBlock Key="Pose_Body" />
+			</RadioButton>
+
+			<RadioButton
+				Grid.Row="2"
+				Grid.Column="1"
+				IsChecked="{Binding Destination, Converter={StaticResource EnumToBool}, ConverterParameter=ScalePack}">
+				<XivToolsWpf:TextBlock Key="Pose_ScalePack" />
+			</RadioButton>
+
+			<RadioButton
+				Grid.Row="3"
+				Grid.Column="1"
+				IsChecked="{Binding Destination, Converter={StaticResource EnumToBool}, ConverterParameter=Selection}">
+				<XivToolsWpf:TextBlock Key="Pose_Selected" />
+			</RadioButton>
+
+			<RadioButton
+				Grid.Row="4"
+				Grid.Column="1"
+				IsChecked="{Binding Destination, Converter={StaticResource EnumToBool}, ConverterParameter=All}">
+				<XivToolsWpf:TextBlock Key="Pose_All" />
+			</RadioButton>
 
 		</Grid>
 

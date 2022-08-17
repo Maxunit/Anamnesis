@@ -49,6 +49,12 @@ public class ServiceManager
 	public SceneService Scene { get; } = new();
 	public PanelService Panels { get; } = new();
 
+#if DEBUG
+	public bool IsDebug => true;
+#else
+	public bool IsDebug => false;
+#endif
+
 	public async Task InitializeCriticalServices()
 	{
 		await this.InitializeService(this.Logs);

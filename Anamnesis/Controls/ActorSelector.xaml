@@ -14,7 +14,8 @@
 	<Grid x:Name="ContentArea">
 		<ComboBox
 			ItemsSource="{Binding Services.Target.PinnedActors}"
-			SelectedItem="{Binding Selection}">
+			SelectedItem="{Binding Selection}"
+			SelectionChanged="OnSelectionChanged">
 
 			<ComboBox.ItemTemplate>
 				<DataTemplate>

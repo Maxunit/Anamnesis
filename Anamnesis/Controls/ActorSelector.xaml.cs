@@ -18,6 +18,8 @@ public partial class ActorSelector : UserControl
 		this.ContentArea.DataContext = this;
 	}
 
+	public event SelectionChangedEventHandler? SelectionChanged;
+
 	public ServiceManager Services => App.Services;
 
 	public PinnedActor? Selection
@@ -41,5 +43,10 @@ public partial class ActorSelector : UserControl
 		{
 			this.Selection = this.Services.Target.PinnedActors[0];
 		}
+	}
+
+	private void OnSelectionChanged(object sender, SelectionChangedEventArgs e)
+	{
+		this.SelectionChanged?.Invoke(this, e);
 	}
 }

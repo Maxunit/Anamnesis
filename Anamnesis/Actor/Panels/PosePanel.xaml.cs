@@ -45,7 +45,6 @@ public partial class PosePanel : ActorPanelBase
 	}
 
 	public SkeletonVisual3d? Skeleton { get; private set; }
-	public bool IsFlipping { get; private set; }
 
 	public List<BoneView> GetBoneViews(BoneVisual3d bone)
 	{
@@ -89,74 +88,6 @@ public partial class PosePanel : ActorPanelBase
 		}
 	}
 
-	/* Basic Idea:
-	 * get mirrored quat of targetBone
-	 * check if its a 'left' bone
-	 *- if it is:
-	 *          - get the mirrored quat of the corresponding right bone
-	 *          - store the first quat (from left bone) on the right bone
-	 *          - store the second quat (from right bone) on the left bone
-	 *      - if not:
-	 *          - store the quat on the target bone
-	 *  - recursively flip on all child bones
-	 */
-
-	// TODO: This doesn't seem to be working correctly after the skeleton upgrade. not sure why...
-	private void FlipBone(BoneVisual3d? targetBone, bool shouldFlip = true)
-	{
-		if (targetBone != null)
-		{
-			CmQuaternion newRotation = targetBone.TransformMemory.Rotation.Mirror(); // character-relative transform
-			if (shouldFlip && targetBone.BoneName.EndsWith("_l"))
-			{
-				string rightBoneString = targetBone.BoneName.Substring(0, targetBone.BoneName.Length - 2) + "_r"; // removes the "_l" and replaces it with "_r"
-				/*	Useful debug lines to make sure the correct bones are grabbed...
-				 *	Log.Information("flipping: " + targetBone.BoneName);
-				 *	Log.Information("right flip target: " + rightBoneString); */
-				BoneVisual3d? rightBone = targetBone.Skeleton.GetBone(rightBoneString);
-				if (rightBone != null)
-				{
-					CmQuaternion rightRot = rightBone.TransformMemory.Rotation.Mirror();
-					foreach (TransformMemory transformMemory in targetBone.TransformMemories)
-					{
-						transformMemory.Rotation = rightRot;
-					}
-
-					foreach (TransformMemory transformMemory in rightBone.TransformMemories)
-					{
-						transformMemory.Rotation = newRotation;
-					}
-				}
-				else
-				{
-					this.Log.Warning("could not find right bone of: " + targetBone.BoneName);
-				}
-			}
-			else if (shouldFlip && targetBone.BoneName.EndsWith("_r"))
-			{
-				// do nothing so it doesn't revert...
-			}
-			else
-			{
-				foreach (TransformMemory transformMemory in targetBone.TransformMemories)
-				{
-					transformMemory.Rotation = newRotation;
-				}
-			}
-
-			if (PoseService.Instance.EnableParenting)
-			{
-				foreach (Visual3D? child in targetBone.Children)
-				{
-					if (child is BoneVisual3d childBone)
-					{
-						this.FlipBone(childBone, shouldFlip);
-					}
-				}
-			}
-		}
-	}
-
 	private void OnLoaded(object sender, RoutedEventArgs e)
 	{
 		this.Services.Pose.PropertyChanged += this.PoseService_PropertyChanged;
@@ -174,117 +105,7 @@ public partial class PosePanel : ActorPanelBase
 		});
 	}
 
-	/*private async void OnImportClicked(object sender, RoutedEventArgs e)
-	{
-		await this.ImportPose(false, PoseFile.Mode.Rotation);
-	}
-
-	private async void OnImportScaleClicked(object sender, RoutedEventArgs e)
-	{
-		await this.ImportPose(false, PoseFile.Mode.Scale);
-	}
-
-	private async void OnImportSelectedClicked(object sender, RoutedEventArgs e)
-	{
-		await this.ImportPose(true, PoseFile.Mode.Rotation);
-	}
-
-	private async void OnImportAllClicked(object sender, RoutedEventArgs e)
-	{
-		await this.ImportPose(false, PoseFile.Mode.All);
-	}
-
-	private async void OnImportBodyClicked(object sender, RoutedEventArgs e)
-	{
-		if (this.Skeleton == null)
-			return;
-
-		this.Skeleton.SelectHead();
-		this.Skeleton.InvertSelection();
-
-		await this.ImportPose(true, PoseFile.Mode.Rotation);
-		this.Skeleton.ClearSelection();
-	}
-
-	private async void OnImportExpressionClicked(object sender, RoutedEventArgs e)
-	{
-		if (this.Skeleton == null)
-			return;
-
-		if (this.Services.Pose.FreezePositions)
-		{
-			bool? result = await GenericDialog.ShowLocalizedAsync("Pose_WarningExpresionPositions", "Common_Confirm", MessageBoxButton.OKCancel);
-
-			if (result != true)
-			{
-				return;
-			}
-		}
-
-		this.Skeleton.SelectHead();
-		await this.ImportPose(true, PoseFile.Mode.Rotation | PoseFile.Mode.Scale);
-		this.Skeleton.ClearSelection();
-	}
-
-	private async Task ImportPose(bool selectionOnly, PoseFile.Mode mode)
-	{
-		try
-		{
-			if (this.Actor == null || this.Skeleton == null)
-				return;
-
-			PoseService.Instance.SetEnabled(true);
-			PoseService.Instance.FreezeScale |= mode.HasFlag(PoseFile.Mode.Scale);
-			PoseService.Instance.FreezeRotation |= mode.HasFlag(PoseFile.Mode.Rotation);
-			PoseService.Instance.FreezePositions |= mode.HasFlag(PoseFile.Mode.Position);
-
-			Type[] types = new[]
-			{
-				typeof(PoseFile),
-				typeof(CmToolPoseFile),
-			};
-
-			Shortcut[] shortcuts = new[]
-			{
-				FileService.DefaultPoseDirectory,
-				FileService.StandardPoseDirectory,
-				FileService.CMToolPoseSaveDir,
-			};
-
-			OpenResult result = await FileService.Open(lastLoadDir, shortcuts, types);
-
-			if (result.File == null)
-				return;
-
-			lastLoadDir = result.Directory;
-
-			if (result.File is CmToolPoseFile legacyFile)
-				result.File = legacyFile.Upgrade(this.Actor.Customize?.Race ?? ActorCustomizeMemory.Races.Hyur);
-
-			if (result.File is PoseFile poseFile)
-			{
-				HashSet<string>? bones = null;
-				if (selectionOnly)
-				{
-					bones = new HashSet<string>();
-
-					foreach ((string name, BoneVisual3d visual) in this.Skeleton.Bones)
-					{
-						if (this.Skeleton.GetIsBoneSelected(visual))
-						{
-							bones.Add(name);
-						}
-					}
-				}
-
-				await poseFile.Apply(this.Actor, this.Skeleton, bones, mode);
-			}
-		}
-		catch (Exception ex)
-		{
-			this.Log.Error(ex, "Failed to load pose file");
-		}
-	}
+	/*
 
 	private async void OnExportClicked(object sender, RoutedEventArgs e)
 	{
@@ -320,63 +141,6 @@ public partial class PosePanel : ActorPanelBase
 		this.GuiView.Visibility = selected == 0 ? Visibility.Visible : Visibility.Collapsed;
 		this.MatrixView.Visibility = selected == 1 ? Visibility.Visible : Visibility.Collapsed;
 		this.ThreeDView.Visibility = selected == 2 ? Visibility.Visible : Visibility.Collapsed;
-	}
-
-	private void OnSelectChildrenClicked(object sender, RoutedEventArgs e)
-	{
-		if (this.Skeleton == null)
-			return;
-
-		List<BoneVisual3d> bones = new List<BoneVisual3d>();
-		foreach (BoneVisual3d bone in this.Skeleton.SelectedBones)
-		{
-			bone.GetChildren(ref bones);
-		}
-
-		this.Skeleton.Select(bones, SkeletonVisual3d.SelectMode.Add);
-	}
-
-	private void OnFlipClicked(object sender, RoutedEventArgs e)
-	{
-		if (this.Skeleton != null && !this.IsFlipping)
-		{
-			// if no bone selected, flip both lumbar and waist bones
-			this.IsFlipping = true;
-			if (this.Skeleton.CurrentBone == null)
-			{
-				BoneVisual3d? waistBone = this.Skeleton.GetBone("Waist");
-				BoneVisual3d? lumbarBone = this.Skeleton.GetBone("SpineA");
-				this.FlipBone(waistBone);
-				this.FlipBone(lumbarBone);
-				waistBone?.ReadTransform(true);
-				lumbarBone?.ReadTransform(true);
-			}
-			else
-			{
-				// if targeted bone is a limb don't switch the respective left and right sides
-				BoneVisual3d targetBone = this.Skeleton.CurrentBone;
-				if (targetBone.BoneName.EndsWith("_l") || targetBone.BoneName.EndsWith("_r"))
-				{
-					this.FlipBone(targetBone, false);
-				}
-				else
-				{
-					this.FlipBone(targetBone);
-				}
-
-				targetBone.ReadTransform(true);
-			}
-
-			this.IsFlipping = false;
-		}
-	}
-
-	private void OnParentClicked(object sender, RoutedEventArgs e)
-	{
-		if (this.Skeleton?.CurrentBone?.Parent == null)
-			return;
-
-		this.Skeleton.Select(this.Skeleton.CurrentBone.Parent);
 	}
 
 	private void OnCanvasMouseDown(object sender, MouseButtonEventArgs e)
