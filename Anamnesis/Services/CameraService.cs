@@ -11,8 +11,8 @@ using Anamnesis.Services;
 
 public class CameraService : ServiceBase<CameraService>
 {
-	private NopHookViewModel? freezeCameraAngleX;
-	private NopHookViewModel? freezeCameraAngleY;
+	/* private NopHookViewModel? freezeCameraAngleX;
+	private NopHookViewModel? freezeCameraAngleY; */
 
 	private bool delimitCamera;
 
@@ -39,7 +39,7 @@ public class CameraService : ServiceBase<CameraService>
 		}
 	}
 
-	public bool FreezeAngle
+	/* public bool FreezeAngle
 	{
 		get
 		{
@@ -52,14 +52,14 @@ public class CameraService : ServiceBase<CameraService>
 			this.freezeCameraAngleX?.SetEnabled(value);
 			this.freezeCameraAngleY?.SetEnabled(value);
 		}
-	}
+	} */
 
 	public override async Task Start()
 	{
 		await base.Start();
 
-		this.freezeCameraAngleX = new NopHookViewModel(AddressService.CameraAngleXFreeze, 8);
-		this.freezeCameraAngleY = new NopHookViewModel(AddressService.CameraAngleYFreeze, 6);
+		/* this.freezeCameraAngleX = new NopHookViewModel(AddressService.CameraAngleXFreeze, 8);
+		this.freezeCameraAngleY = new NopHookViewModel(AddressService.CameraAngleYFreeze, 6); */
 
 		_ = Task.Run(this.Tick);
 	}
@@ -93,7 +93,8 @@ public class CameraService : ServiceBase<CameraService>
 				if (!GposeService.Instance.IsGpose)
 				{
 					this.DelimitCamera = false;
-					this.FreezeAngle = false;
+					this.Camera.FreezeAngle = false;
+					/* this.FreezeAngle = false; */
 				}
 				else
 				{
