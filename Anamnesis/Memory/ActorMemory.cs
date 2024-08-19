@@ -57,7 +57,7 @@ public class ActorMemory : ActorBasicMemory
 	[Bind(0x08F8, BindFlags.Pointer)] public ActorMemory? Ornament { get; set; }
 	[Bind(0x0900)] public ushort OrnamentId { get; set; }
 	[Bind(0x09C0)] public AnimationMemory? Animation { get; set; }
-	[Bind(0x12D4)] public bool IsMotionEnabled { get; set; }
+	[Bind(0x1ABC)] public bool IsMotionDisabled { get; set; }
 	[Bind(0x19D0)] public byte Voice { get; set; }
 	[Bind(0x21C8)] public float Transparency { get; set; }
 	[Bind(0x226C)] public byte CharacterModeRaw { get; set; }
@@ -118,6 +118,13 @@ public class ActorMemory : ActorBasicMemory
 				this.CharacterFlags &= ~CharacterFlagDefs.VisorToggled;
 			}
 		}
+	}
+
+ 	[DependsOn(nameof(IsMotionDisabled))]
+	public bool IsMotionEnabled
+	{
+		get => !this.IsMotionDisabled;
+		set => this.IsMotionDisabled = !value;
 	}
 
 	[DependsOn(nameof(ObjectIndex), nameof(CharacterMode))]
