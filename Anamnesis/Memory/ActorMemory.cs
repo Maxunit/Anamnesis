@@ -120,7 +120,7 @@ public class ActorMemory : ActorBasicMemory
 		}
 	}
 
- 	[DependsOn(nameof(IsMotionDisabled))]
+	[DependsOn(nameof(IsMotionDisabled))]
 	public bool IsMotionEnabled
 	{
 		get => !this.IsMotionDisabled;
