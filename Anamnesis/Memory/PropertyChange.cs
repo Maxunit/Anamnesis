@@ -41,8 +41,10 @@ public struct PropertyChange
 	/// <summary>Gets or sets the name of the property.</summary>
 	public string? Name;
 
-	/// <summary>The full path of the property change.</summary>
-	private string path;
+	/// <summary>
+	/// Caches the computed path of the property change to avoid string concatenation overhead.
+	/// </summary>
+	private string? cachedPath;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="PropertyChange"/> struct.
@@ -54,7 +56,6 @@ public struct PropertyChange
 	public PropertyChange(BindInfo bind, object? oldValue, object? newValue, Origins origin)
 	{
 		this.BindPath = new List<BindInfo>(1) { bind };
-		this.path = bind.Path;
 		this.OldValue = oldValue;
 		this.NewValue = newValue;
 		this.Origin = origin;
@@ -71,7 +72,6 @@ public struct PropertyChange
 		this.BindPath.AddRange(other.BindPath);
 		this.OldValue = other.OldValue;
 		this.NewValue = other.NewValue;
-		this.path = other.path;
 		this.Origin = other.Origin;
 		this.Name = other.Name;
 	}
@@ -85,7 +85,25 @@ public struct PropertyChange
 	}
 
 	/// <summary>Gets the full path of the property change.</summary>
-	public readonly string Path => this.path;
+	public string Path
+	{
+		get
+		{
+			// Use cached value if available
+			if (this.cachedPath != null)
+				return this.cachedPath;
+
+			if (this.BindPath.Count == 0)
+				return string.Empty;
+
+			var sb = new System.Text.StringBuilder();
+			foreach (var bind in this.BindPath)
+				sb.Append(bind.Path);
+
+			this.cachedPath = string.Intern(sb.ToString());
+			return this.cachedPath;
+		}
+	}
 
 	/// <summary>Gets the bind information of the origin property bind.</summary>
 	public readonly BindInfo OriginBind => this.BindPath[0];
@@ -121,7 +139,9 @@ public struct PropertyChange
 	public void AddPath(BindInfo bind)
 	{
 		this.BindPath.Add(bind);
-		this.path = bind.Path + this.path;
+
+		// Invalidate cached path
+		this.cachedPath = null;
 	}
 
 	/// <summary>
@@ -146,14 +166,17 @@ public struct PropertyChange
 
 			memParent = memParent.Parent;
 		}
+
+		// Invalidate cached path
+		this.cachedPath = null;
 	}
 
 	/// <summary>
 	/// Returns a string that represents the current object.
 	/// </summary>
 	/// <returns>A string that represents the current object.</returns>
-	public override readonly string ToString()
+	public override string ToString()
 	{
-		return $"{this.path}: {this.OldValue} -> {this.NewValue}";
+		return $"{this.Path}: {this.OldValue} -> {this.NewValue}";
 	}
 }
