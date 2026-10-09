@@ -14,9 +14,9 @@ using MediaColor = System.Windows.Media.Color;
 /// <summary>
 /// Represents a stain in the game data, which includes information about dyes and their associated items.
 /// </summary>
-[Sheet("Stain", 0x97C471BD)]
+[Sheet("Stain", 0x346C5926)]
 public readonly struct Stain(ExcelPage page, uint offset, uint row)
-	: IExcelRow<Stain>, IDye
+	: IExcelRow<Stain>, IDye, IEquatable<Stain>
 {
 	/// <summary>Maps dye IDs to item keys.</summary>
 	/// <remarks>
@@ -58,7 +58,7 @@ public readonly struct Stain(ExcelPage page, uint offset, uint row)
 	public readonly byte Id => (byte)this.RowId;
 
 	/// <summary>Gets the stain's name.</summary>
-	public readonly string Name => page.ReadString(offset, offset).ToString() ?? string.Empty;
+	public readonly string Name => page.ReadString(offset + 4, offset).ToString() ?? string.Empty;
 
 	/// <summary>Gets the stain's description.</summary>
 	/// <remarks>
@@ -67,7 +67,7 @@ public readonly struct Stain(ExcelPage page, uint offset, uint row)
 	public readonly string Description => string.Empty;
 
 	/// <summary>Gets the stain's shade.</summary>
-	public readonly byte Shade => page.ReadUInt8(offset + 12);
+	public readonly byte Shade => page.ReadUInt8(offset + 20);
 
 	/// <inheritdoc/>
 	public readonly Brush? Color
@@ -122,6 +122,9 @@ public readonly struct Stain(ExcelPage page, uint offset, uint row)
 		set => FavoritesService.SetFavorite<IDye>(this, value);
 	}
 
+	public static bool operator ==(Stain left, Stain right) => left.Equals(right);
+	public static bool operator !=(Stain left, Stain right) => !(left == right);
+
 	/// <summary>
 	/// Creates a new instance of the <see cref="Stain"/> struct.
 	/// </summary>
@@ -131,4 +134,8 @@ public readonly struct Stain(ExcelPage page, uint offset, uint row)
 	/// <returns>A new instance of the <see cref="Stain"/> struct.</returns>
 	static Stain IExcelRow<Stain>.Create(ExcelPage page, uint offset, uint row) =>
 		new(page, offset, row);
+
+	public bool Equals(Stain other) => this.RowId == other.RowId;
+	public override bool Equals(object? obj) => obj is Stain other && this.Equals(other);
+	public override int GetHashCode() => this.RowId.GetHashCode();
 }

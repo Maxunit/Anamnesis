@@ -25,6 +25,9 @@ public class AnimationMemory : MemoryBase
 		UpperBody = 1,
 		Facial = 2,
 		Add = 3,
+		Unk0 = 4, // 4 - 6: Unknown purpose
+		Unk1 = 5,
+		Unk2 = 6,
 		Lips = 7,
 		Parts1 = 8,
 		Parts2 = 9,
@@ -38,6 +41,7 @@ public class AnimationMemory : MemoryBase
 	[Bind(0x1F2)] public byte SpeedTrigger { get; set; }
 	[Bind(0x2E6)] public ushort BaseOverride { get; set; }
 	[Bind(0x2E8)] public ushort LipsOverride { get; set; }
+	[Bind(0x34E)] public byte Flags { get; set; }
 
 	public bool BlendLocked { get; set; } = false;
 
@@ -52,6 +56,16 @@ public class AnimationMemory : MemoryBase
 			this.linkSpeeds = value;
 			this.ApplyAnimationLink(this.Speeds![0].Value);
 		}
+	}
+
+	/// <summary>
+	/// Gets or sets a value indicating whether the object is visible.
+	/// </summary>
+	[DependsOn(nameof(Flags))]
+	public bool IsWeaponDrawn
+	{
+		get => (this.Flags & 0x40) == 0x40;
+		set => this.Flags = (byte)(value ? this.Flags | 0x40 : this.Flags & ~0x40);
 	}
 
 	private void HandlePropertyChanged(object? sender, PropertyChangedEventArgs e)

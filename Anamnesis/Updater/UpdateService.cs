@@ -122,6 +122,7 @@ public partial class UpdateService : ServiceBase<UpdateService>
 					Changes = this.currentRelease.Changes,
 				};
 				await ViewService.ShowDialog<UpdateDialog, bool?>("Update", dlg);
+				update = dlg.IsUpdating;
 			}
 
 			SettingsService.Current.LastUpdateCheck = DateTimeOffset.Now;
@@ -208,13 +209,7 @@ public partial class UpdateService : ServiceBase<UpdateService>
 				Directory.CreateDirectory(UpdateTempDir);
 			}
 
-			{
-				using FileStream zipFile = new(zipFilePath, FileMode.Open);
-				using ZipArchive archive = new(zipFile, ZipArchiveMode.Read);
-				archive.ExtractToDirectory(UpdateTempDir, true);
-				archive.Dispose();
-				await zipFile.DisposeAsync();
-			}
+			ZipFile.ExtractToDirectory(zipFilePath, UpdateTempDir, overwriteFiles: true);
 
 			if (File.Exists(zipFilePath))
 			{

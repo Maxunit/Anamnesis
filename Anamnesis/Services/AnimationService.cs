@@ -156,10 +156,10 @@ public class AnimationService : ServiceBase<AnimationService>
 			var actors = TargetService.Instance.PinnedActors.ToList();
 			foreach (var actor in actors)
 			{
-				if (actor.IsValid && actor.Memory != null && actor.Memory.Address != IntPtr.Zero && actor.Memory.IsValid)
+				if (actor.IsValid && actor.Memory?.IsValid == true)
 				{
-					actor.Memory.Animation!.LinkSpeeds = true;
-					actor.Memory.Animation!.Speeds![(int)AnimationMemory.AnimationSlots.FullBody].Value = 0.0f;
+					actor.Memory.Do(a => a.Animation!.LinkSpeeds = true);
+					actor.Memory.Do(a => a.Animation!.Speeds![(int)AnimationMemory.AnimationSlots.FullBody].Value = 0.0f);
 				}
 			}
 		}
@@ -205,7 +205,14 @@ public class AnimationService : ServiceBase<AnimationService>
 			memory.Animation!.AnimationIds![(int)AnimationMemory.AnimationSlots.FullBody].Value = 0;
 		}
 
-		memory.Synchronize();
+		try
+		{
+			memory.Synchronize();
+		}
+		catch (Exception ex)
+		{
+			Log.Warning($"Failed to synchronize after apply animation override: {ex.Message}");
+		}
 	}
 
 	private async Task CheckThread(CancellationToken cancellationToken)

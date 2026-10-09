@@ -59,11 +59,16 @@ public enum Classes : long
 	Sage = 1L << 40,
 	Viper = 1L << 41,
 	Pictomancer = 1L << 42,
+	Beastmaster = 1L << 43,
+
+	Crafters = Alchemist | Armorer | Blacksmith | Carpenter | Culinarian | Goldsmith | Leatherworker | Weaver,
+	Gatherers = Botanist | Fisher | Miner,
 
 	All = Alchemist | Arcanist | Archer | Armorer | Astrologian | Bard | BlackMage | Blacksmith | BlueMage | Botanist
 		| Carpenter | Conjurer | Culinarian | Dancer | DarkKnight | Dragoon | Fisher | Gladiator | Goldsmith | Gunbreaker
 		| Lancer | Leatherworker | Machinist | Marauder | Miner | Monk | Ninja | Paladin | Pugilist | RedMage | Rogue
-		| Samurai | Scholar | Summoner | Thaumaturge | Warrior | Weaver | WhiteMage | Reaper | Sage | Viper | Pictomancer,
+		| Samurai | Scholar | Summoner | Thaumaturge | Warrior | Weaver | WhiteMage | Reaper | Sage | Viper | Pictomancer
+		| Beastmaster,
 }
 
 public static class ClassesExtensions
@@ -84,6 +89,7 @@ public static class ClassesExtensions
 			Classes.Armorer => "Armorer",
 			Classes.Astrologian => "Astrologian",
 			Classes.Bard => "Bard",
+			Classes.Beastmaster => "Beastmaster",
 			Classes.BlackMage => "Black Mage",
 			Classes.Blacksmith => "Blacksmith",
 			Classes.BlueMage => "Blue Mage",
@@ -136,12 +142,15 @@ public static class ClassesExtensions
 		{
 			Classes.None => null,
 			Classes.All => null,
+			Classes.Crafters => null,
+			Classes.Gatherers => null,
 			Classes.Alchemist => Roles.Crafters,
 			Classes.Arcanist => Roles.Damage,
 			Classes.Archer => Roles.Damage,
 			Classes.Armorer => Roles.Crafters,
 			Classes.Astrologian => Roles.Healers,
 			Classes.Bard => Roles.Damage,
+			Classes.Beastmaster => Roles.Damage,
 			Classes.BlackMage => Roles.Damage,
 			Classes.Blacksmith => Roles.Crafters,
 			Classes.BlueMage => Roles.Damage,
@@ -205,6 +214,7 @@ public static class ClassesExtensions
 			Classes.Armorer => 062010,
 			Classes.Astrologian => 062033,
 			Classes.Bard => 062023,
+			Classes.Beastmaster => 062043,
 			Classes.BlackMage => 062025,
 			Classes.Blacksmith => 062009,
 			Classes.BlueMage => 062036,
@@ -298,7 +308,7 @@ public static class ClassesExtensions
 	/// <returns>True if this is a job, false if it is a class.</returns>
 	public static bool IsJob(this Classes self)
 	{
-		if (self == Classes.None || self == Classes.All)
+		if (self == Classes.None || self == Classes.All || self == Classes.Crafters || self == Classes.Gatherers)
 			return false;
 
 		return !self.IsClass();
@@ -315,6 +325,12 @@ public static class ClassesExtensions
 	{
 		if (self == Classes.All)
 			return "All";
+
+		if (self == Classes.Crafters)
+			return "Crafters";
+
+		if (self == Classes.Gatherers)
+			return "Gatherers";
 
 		if (self == Classes.None)
 			return "None";
@@ -361,7 +377,7 @@ public static class ClassesExtensions
 			}
 		}
 
-		// check if there are any extra classes that werent part of the enire role
+		// check if there are any extra classes that werent part of the entire role
 		foreach (Roles? role in Enum.GetValues<Roles>().Select(v => (Roles?)v))
 		{
 			if (role == null)

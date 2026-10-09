@@ -19,7 +19,7 @@ using System.Windows.Threading;
 using static Anamnesis.Memory.ActorCustomizeMemory;
 
 /// <summary>
-/// Interaction logic for AppearancePage.xaml.
+/// Interaction logic for CustomizeEditor.xaml.
 /// </summary>
 [AddINotifyPropertyChangedInterface]
 public partial class CustomizeEditor : UserControl
@@ -75,6 +75,7 @@ public partial class CustomizeEditor : UserControl
 	[DependsOn(nameof(Customize), nameof(HasEars), nameof(HasTail))]
 	public bool HasSeparateTailEarsModel => this.Customize?.Race != Races.Elezen && this.Customize?.Race != Races.Lalafel;
 	public bool HasMuscles { get; set; }
+	public bool HasBust { get; set; }
 	public bool CanAge { get; set; }
 	public CharaMakeCustomize? Hair { get; set; }
 	public CharaMakeCustomize? FacePaint { get; set; }
@@ -119,10 +120,10 @@ public partial class CustomizeEditor : UserControl
 		if (this.Customize != null)
 			this.Customize.PropertyChanged -= this.OnAppearancePropertyChanged;
 
-		if (actor == null || actor.Customize == null)
+		if (actor?.DrawData.Customize == null)
 			return;
 
-		this.Customize = actor.Customize;
+		this.Customize = actor.DrawData.Customize;
 		this.Customize.PropertyChanged += this.OnAppearancePropertyChanged;
 
 		Application.Current.Dispatcher.Invoke(this.UpdateRaceAndTribe);
@@ -165,7 +166,11 @@ public partial class CustomizeEditor : UserControl
 		if (dataPath.HasValue && CustomizeOptionsCache.ValidFaceIds.TryGetValue(dataPath.Value, out var validFaces))
 		{
 			// Apply offset logic for specific tribes
-			if (s_offsetTargets.Contains(tribe))
+			if (this.Actor != null && this.Actor.ObjectKind != ObjectTypes.Player)
+			{
+				this.ValidFaceOptions = validFaces.ToList();
+			}
+			else if (s_offsetTargets.Contains(tribe))
 			{
 				this.ValidFaceOptions = validFaces
 					.Where(v => v > 100)
@@ -280,6 +285,7 @@ public partial class CustomizeEditor : UserControl
 		this.HasFur = this.Customize.Race == Races.Hrothgar;
 		this.HasEarsTail = this.HasTail || this.HasEars;
 		this.HasMuscles = !this.HasEars && !this.HasTail;
+		this.HasBust = this.Customize.Gender == Genders.Feminine;
 		this.HasGender = true;
 
 		this.OnPropertyChanged(nameof(this.HasSeparateTailEarsModel));

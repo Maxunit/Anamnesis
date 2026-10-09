@@ -188,7 +188,7 @@ public partial class MainWindow : ChromedWindow
 		}
 	}
 
-	private void OnActorSelected(ActorMemory? actor)
+	private void OnActorSelected(ObjectHandle<ActorMemory>? actor)
 	{
 		if (actor != null)
 		{
@@ -332,7 +332,8 @@ public partial class MainWindow : ChromedWindow
 
 			try
 			{
-				if (await Brio.Brio.Despawn(actor.Memory.ObjectIndex))
+				ushort objectIndex = actor.Memory.Do(a => a.ObjectIndex) ?? throw new Exception("Actor has no object index");
+				if (await Brio.Brio.Despawn(objectIndex))
 				{
 					TargetService.UnpinActor(actor);
 				}
@@ -361,18 +362,20 @@ public partial class MainWindow : ChromedWindow
 		}
 	}
 
-	private async void Window_Closing(object sender, CancelEventArgs e)
+	private async void OnClosing(object sender, CancelEventArgs e)
 	{
 		if (PoseService.Instance.IsInitialized && PoseService.Instance.IsEnabled && !this.IsClosing)
 		{
 			bool? result = await GenericDialog.ShowAsync(LocalizationService.GetString("Pose_WarningQuit"), LocalizationService.GetString("Common_Confirm"), MessageBoxButton.OKCancel);
-
 			if (result != true)
 			{
 				e.Cancel = true;
 				return;
 			}
 		}
+
+		if (this.IsClosing)
+			return;
 
 		this.IsClosing = true;
 		this.mini?.Close();

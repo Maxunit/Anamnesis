@@ -13,7 +13,7 @@ using Lumina.Excel.Sheets;
 using System;
 
 /// <summary>Represents a base battle non-player entity from the game data.</summary>
-[Sheet("BNpcBase", 0xD5D82616)]
+[Sheet("BNpcBase", 0xAD223303)]
 public readonly struct BattleNpc(ExcelPage page, uint offset, uint row)
 	: IExcelRow<BattleNpc>, INpcBase
 {
@@ -37,13 +37,13 @@ public readonly struct BattleNpc(ExcelPage page, uint offset, uint row)
 	public uint ModelCharaRow => this.ModelChara.RowId;
 
 	/// <summary>Gets the ModelChara object reference of the battle non-player entity.</summary>
-	public readonly RowRef<ModelChara> ModelChara => new(page.Module, (uint)page.ReadUInt16(offset + 10), page.Language);
+	public readonly RowRef<ModelChara> ModelChara => new(page.Module, (uint)page.ReadUInt16(offset + 14), page.Language);
 
 	/// <summary>Gets the <c>BNpcCustomize</c> object reference of the battle non-player entity.</summary>
-	public readonly RowRef<BNpcCustomize> BNpcCustomize => new(page.Module, (uint)page.ReadUInt16(offset + 12), page.Language);
+	public readonly RowRef<BNpcCustomize> BNpcCustomize => new(page.Module, (uint)page.ReadUInt16(offset + 16), page.Language);
 
 	/// <summary>Gets the <c>NpcEquip</c> object reference of the battle non-player entity.</summary>
-	public readonly RowRef<NpcEquip> NpcEquip => new(page.Module, (uint)page.ReadUInt16(offset + 14), page.Language);
+	public readonly RowRef<NpcEquip> NpcEquip => new(page.Module, (uint)page.ReadUInt16(offset + 18), page.Language);
 
 	/// <inheritdoc/>
 	public ImgRef? Icon => null;

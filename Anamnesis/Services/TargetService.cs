@@ -23,13 +23,15 @@ using XivToolsWpf;
 [AddINotifyPropertyChangedInterface]
 public class TargetService : ServiceBase<TargetService>
 {
+	public static readonly HashSet<string> ExcludeSkeletonGroup = new() { "Skeleton" };
+
 	private const int TASK_DELAY = 32; // ms (~30 fps)
 
 	/// <summary>
 	/// The delegate object for the <see cref="TargetService.ActorSelected"/> event.
 	/// </summary>
 	/// <param name="actor">The actor that was selected, or null if selection was cleared.</param>
-	public delegate void SelectionEvent(ActorMemory? actor);
+	public delegate void SelectionEvent(ObjectHandle<ActorMemory>? actor);
 
 	/// <summary>
 	/// The delegate object for the <see cref="TargetService.ActorPinned"/>
@@ -54,14 +56,14 @@ public class TargetService : ServiceBase<TargetService>
 	public static event PinnedEvent? ActorUnPinned;
 
 	/// <summary>
-	/// Gets the player target actor.
+	/// Gets a handle to player target actor.
 	/// </summary>
-	public ActorBasicMemory? PlayerTarget { get; private set; } = new();
+	public ObjectHandle<GameObjectMemory>? PlayerTargetHandle { get; private set; }
 
 	/// <summary>
 	/// Gets a value indicating whether the player target is pinnable.
 	/// </summary>
-	public bool IsPlayerTargetPinnable => this.PlayerTarget != null && this.PlayerTarget.Address != IntPtr.Zero && this.PlayerTarget.ObjectKind.IsSupportedType();
+	public bool IsPlayerTargetPinnable => this.PlayerTargetHandle != null && this.PlayerTargetHandle.Do(a => a.ObjectKind.IsSupportedType()) == true;
 
 	/// <summary>
 	/// Gets the currently pinned selected actor (if any).
@@ -77,7 +79,7 @@ public class TargetService : ServiceBase<TargetService>
 	/// Gets the memory of the currently pinned selected actor (if any).
 	/// </summary>
 	[DependsOn(nameof(CurrentlyPinned))]
-	public ActorMemory? SelectedActor => this.CurrentlyPinned?.Memory;
+	public ObjectHandle<ActorMemory>? SelectedActor => this.CurrentlyPinned?.Memory;
 
 	/// <summary>
 	/// Gets the count of pinned actors.
@@ -102,25 +104,33 @@ public class TargetService : ServiceBase<TargetService>
 	/// <summary>
 	/// Pins the targeted actor to the list of pinned actors.
 	/// </summary>
-	/// <param name="basicActor">The actor to pin.</param>
+	/// <param name="handle">An object handle to the target actor to pin.</param>
 	/// <param name="select">A flag indicating whether to select the actor after pinning.</param>
 	/// <returns>A task representing the asynchronous operation.</returns>
-	public static async Task PinActor(ActorBasicMemory basicActor, bool select = false)
+	public static async Task PinActor(ObjectHandle<GameObjectMemory> handle, bool select = false)
 	{
-		if (basicActor.Address == IntPtr.Zero)
+		if (!handle.IsValid)
 			return;
 
-		if (!basicActor.ObjectKind.IsSupportedType())
+		var result = handle.Do(a =>
 		{
-			Log.Warning($"You cannot pin actor of type: {basicActor.ObjectKind}");
+			if (!a.ObjectKind.IsSupportedType())
+			{
+				Log.Warning($"You cannot pin actor of type: {a.ObjectKind}");
+				return false;
+			}
+
+			return true;
+		});
+
+		if (result != true)
 			return;
-		}
 
 		try
 		{
 			foreach (PinnedActor otherActor in Instance.PinnedActors)
 			{
-				if (basicActor.Address == otherActor.Pointer)
+				if (handle.Address == otherActor.Pointer)
 				{
 					Log.Information($"Actor already pinned: {otherActor}");
 					Instance.SelectActor(otherActor);
@@ -128,24 +138,22 @@ public class TargetService : ServiceBase<TargetService>
 				}
 			}
 
-			ActorMemory memory = new();
+			var actorMemHandle = ActorService.Instance.ObjectTable.Get<ActorMemory>(handle.Address);
+			if (actorMemHandle != null)
+			{
+				var pinned = new PinnedActor(actorMemHandle);
 
-			if (basicActor is ActorMemory actorMemory)
-				memory = actorMemory;
+				Log.Information($"Pinning actor: {pinned}");
 
-			memory.SetAddress(basicActor.Address);
-			var pinned = new PinnedActor(memory);
+				await Dispatch.MainThread();
+				Instance.PinnedActors.Add(pinned);
+				Instance.PinnedActorCount = Instance.PinnedActors.Count;
 
-			Log.Information($"Pinning actor: {pinned}");
+				if (select)
+					Instance.SelectActor(pinned);
 
-			await Dispatch.MainThread();
-			Instance.PinnedActors.Add(pinned);
-			Instance.PinnedActorCount = Instance.PinnedActors.Count;
-
-			if (select)
-				Instance.SelectActor(pinned);
-
-			ActorPinned?.Invoke(pinned);
+				ActorPinned?.Invoke(pinned);
+			}
 		}
 		catch (Exception ex)
 		{
@@ -157,10 +165,10 @@ public class TargetService : ServiceBase<TargetService>
 	/// Gets the memory of the player target.
 	/// </summary>
 	/// <returns>The memory of the player target.</returns>
-	public static ActorBasicMemory? GetTargetedActor()
+	public static ObjectHandle<GameObjectMemory>? GetTargetedActor()
 	{
 		Instance.UpdatePlayerTarget();
-		return Instance.PlayerTarget;
+		return Instance.PlayerTargetHandle;
 	}
 
 	/// <summary>
@@ -193,17 +201,17 @@ public class TargetService : ServiceBase<TargetService>
 	/// </summary>
 	/// <param name="actor">The actor to search for.</param>
 	/// <returns>The pinned actor if found, otherwise null.</returns>
-	public static PinnedActor? GetPinned(ActorBasicMemory actor)
+	public static PinnedActor? GetPinned<T>(ObjectHandle<T> actor)
+		where T : GameObjectMemory, new()
 	{
-		foreach (PinnedActor pinned in TargetService.Instance.PinnedActors.ToList())
+		var targetId = actor.DoRef(a => a.Id);
+		foreach (PinnedActor pinned in Instance.PinnedActors.ToList())
 		{
 			if (pinned.Memory == null)
 				continue;
 
-			if (pinned.Memory.Id == actor.Id)
-			{
+			if (pinned.Memory.Do(a => a.Id == targetId) == true)
 				return pinned;
-			}
 		}
 
 		return null;
@@ -214,7 +222,8 @@ public class TargetService : ServiceBase<TargetService>
 	/// </summary>
 	/// <param name="actor">The actor to check.</param>
 	/// <returns>True if the actor is pinned, otherwise false.</returns>
-	public static bool IsPinned(ActorBasicMemory actor) => GetPinned(actor) != null;
+	public static bool IsPinned<T>(ObjectHandle<T> actor)
+		where T : GameObjectMemory, new() => GetPinned(actor) != null;
 
 	/// <summary>
 	/// Sets the player target to the specified pinned actor.
@@ -232,7 +241,7 @@ public class TargetService : ServiceBase<TargetService>
 	/// Sets the player target to the specified actor.
 	/// </summary>
 	/// <param name="actor">The actor to set as the new player target.</param>
-	public static void SetPlayerTarget(ActorBasicMemory actor)
+	public static void SetPlayerTarget(GameObjectMemory actor)
 	{
 		if (actor.IsValid)
 		{
@@ -248,7 +257,7 @@ public class TargetService : ServiceBase<TargetService>
 	{
 		foreach (var pinned in Instance.PinnedActors)
 		{
-			if (Instance.PlayerTarget != null && pinned.Pointer == Instance.PlayerTarget.Address)
+			if (Instance.PlayerTargetHandle != null && pinned.Pointer == Instance.PlayerTargetHandle.Address)
 				return pinned;
 		}
 
@@ -274,12 +283,47 @@ public class TargetService : ServiceBase<TargetService>
 	}
 
 	/// <inheritdoc/>
-	public override Task Shutdown()
+	public override async Task Shutdown()
 	{
+		// Trigger a token cancellation first before disposing pinned actors to avoid conflicts with the background task
+		await base.Shutdown();
+
 		GposeService.GposeStateChanged -= this.GposeService_GposeStateChanged;
+		GposeService.InitialStateResolved -= this.OnGposeInitialStateResolved;
 		PoseService.EnabledChanged -= this.PoseService_EnabledChanged;
-		PoseService.FreezeWorldPositionsEnabledChanged -= this.PoseService_EnabledChanged;
-		return base.Shutdown();
+		PoseService.FreezeWorldStateEnabledChanged -= this.PoseService_EnabledChanged;
+
+		// Dispose and clear all pinned actors to prevent stale handles on process restart
+		if (App.Current != null)
+		{
+			App.Current.Dispatcher.Invoke(() =>
+			{
+				this.CurrentlyPinned = null;
+
+				foreach (var actor in this.PinnedActors)
+				{
+					actor.Dispose();
+				}
+
+				this.PinnedActors.Clear();
+				this.PinnedActorCount = 0;
+			});
+		}
+		else
+		{
+			this.CurrentlyPinned = null;
+
+			foreach (var actor in this.PinnedActors)
+			{
+				actor.Dispose();
+			}
+
+			this.PinnedActors.Clear();
+			this.PinnedActorCount = 0;
+		}
+
+		this.PlayerTargetHandle?.Dispose();
+		this.PlayerTargetHandle = null;
 	}
 
 	/// <summary>Clears the actor selection.</summary>
@@ -421,48 +465,15 @@ public class TargetService : ServiceBase<TargetService>
 	{
 		GposeService.GposeStateChanged += this.GposeService_GposeStateChanged;
 		PoseService.EnabledChanged += this.PoseService_EnabledChanged;
-		PoseService.FreezeWorldPositionsEnabledChanged += this.PoseService_EnabledChanged;
+		PoseService.FreezeWorldStateEnabledChanged += this.PoseService_EnabledChanged;
 
-#if DEBUG
-		if (MemoryService.Process == null)
+		if (GameService.GetIsSignedIn() && GposeService.InstanceOrNull?.HasInitialState == true)
 		{
-			await TargetService.PinActor(new DummyActor(1));
-			await TargetService.PinActor(new DummyActor(2));
-			return;
+			await PinDefaultActor();
 		}
-#endif
-
-		if (GameService.GetIsSignedIn())
+		else
 		{
-			try
-			{
-				bool isGpose = GposeService.GetIsGPose();
-
-				List<ActorBasicMemory> allActors = ActorService.Instance.GetAllActors();
-
-				// We want the first non-hidden actor with a name in the same mode as the game
-				foreach (ActorBasicMemory actor in allActors)
-				{
-					if (actor.IsDisposed)
-						continue;
-
-					if (actor.IsHidden)
-						continue;
-
-					if (string.IsNullOrEmpty(actor.Name))
-						continue;
-
-					if (actor.IsGPoseActor != isGpose)
-						continue;
-
-					await PinActor(actor);
-					break;
-				}
-			}
-			catch (Exception ex)
-			{
-				Log.Error(ex, "Failed to pin default actor");
-			}
+			GposeService.InitialStateResolved += this.OnGposeInitialStateResolved;
 		}
 
 		this.CancellationTokenSource = new CancellationTokenSource();
@@ -470,11 +481,62 @@ public class TargetService : ServiceBase<TargetService>
 		await base.OnStart();
 	}
 
+	private static async Task PinDefaultActor()
+	{
+		try
+		{
+			var actorHandles = ActorService.Instance.ObjectTable.GetAll();
+			bool? isGpose = GposeService.IsInGpose();
+
+			// We want the first non-hidden actor with a name in the same mode as the game
+			foreach (var handle in actorHandles)
+			{
+				var result = handle.Do(a =>
+				{
+					if (a.IsDisposed)
+						return false;
+
+					try
+					{
+						// Ensure the actor data is up to date
+						a.Synchronize();
+					}
+					catch (Exception ex)
+					{
+						Log.Warning(ex, $"Failed to synchronize actor ID \"{a.IdNoAddress}\" at address {a.Address:X}");
+						return false;
+					}
+
+					if (a.IsHidden)
+						return false;
+
+					if (string.IsNullOrEmpty(a.Name))
+						return false;
+
+					if (!isGpose.HasValue || a.IsGPoseActor != isGpose.Value)
+						return false;
+
+					return true;
+				});
+
+				if (result == true)
+				{
+					await PinActor(handle);
+					break;
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			Log.Error(ex, "Failed to pin default actor");
+		}
+	}
+
 	private static void SetPlayerTarget(IntPtr? ptr)
 	{
 		if (ptr != null && ptr != IntPtr.Zero)
 		{
-			if (ActorService.Instance.IsActorInTable((IntPtr)ptr))
+			if (ActorService.Instance.ObjectTable.Contains((IntPtr)ptr))
 			{
 				if (GposeService.Instance.IsGpose)
 				{
@@ -494,14 +556,9 @@ public class TargetService : ServiceBase<TargetService>
 
 		try
 		{
-			if (GposeService.Instance.IsGpose)
-			{
-				currentPlayerTargetPtr = AddressService.GPosePlayerTarget;
-			}
-			else
-			{
-				currentPlayerTargetPtr = AddressService.OverworldPlayerTarget;
-			}
+			currentPlayerTargetPtr = GposeService.Instance.IsGpose
+				? AddressService.GPosePlayerTarget
+				: AddressService.OverworldPlayerTarget;
 		}
 		catch
 		{
@@ -510,20 +567,23 @@ public class TargetService : ServiceBase<TargetService>
 
 		try
 		{
-			if (currentPlayerTargetPtr != this.PlayerTarget?.Address)
+			bool wasNull = this.PlayerTargetHandle == null;
+			bool willBeNull = currentPlayerTargetPtr == IntPtr.Zero;
+
+			if (wasNull != willBeNull || (!willBeNull && (this.PlayerTargetHandle?.Address != currentPlayerTargetPtr)))
 			{
-				if (currentPlayerTargetPtr == IntPtr.Zero)
+				// Only raise property changed if transitioning between null and non-null
+				if (willBeNull)
 				{
-					this.PlayerTarget?.Dispose();
-					this.PlayerTarget = null;
+					this.PlayerTargetHandle?.Dispose();
+					this.PlayerTargetHandle = null;
 				}
 				else
 				{
-					this.PlayerTarget ??= new ActorBasicMemory();
-					this.PlayerTarget!.SetAddress(currentPlayerTargetPtr);
+					this.PlayerTargetHandle = ActorService.Instance.ObjectTable.Get<GameObjectMemory>(currentPlayerTargetPtr);
 				}
 
-				this.RaisePropertyChanged(nameof(TargetService.PlayerTarget));
+				this.RaisePropertyChanged(nameof(TargetService.PlayerTargetHandle));
 				this.RaisePropertyChanged(nameof(TargetService.IsPlayerTargetPinnable));
 			}
 		}
@@ -533,17 +593,27 @@ public class TargetService : ServiceBase<TargetService>
 		}
 
 		// Tick the actor if it still exists
-		if (this.PlayerTarget != null && this.PlayerTarget.Address != IntPtr.Zero)
+		var handle = this.PlayerTargetHandle;
+		if (handle?.IsValid == true)
 		{
 			try
 			{
-				var pinnedActor = this.PinnedActors.FirstOrDefault(pinned => pinned.Memory?.Address == this.PlayerTarget.Address);
+				PinnedActor? pinnedActor = null;
+				for (int i = 0, count = this.PinnedActors.Count; i < count; i++)
+				{
+					var pinned = this.PinnedActors[i];
+					if (pinned.Memory?.Address == handle.Address)
+					{
+						pinnedActor = pinned;
+						break;
+					}
+				}
 
 				// If the player target is pinned, synchronize through the pinned actor class. Otherwise synchronize directly.
 				if (pinnedActor != null)
 					pinnedActor.Tick();
 				else
-					this.PlayerTarget.Synchronize();
+					handle.Synchronize(exclGroups: ExcludeSkeletonGroup);
 			}
 			catch
 			{
@@ -563,7 +633,7 @@ public class TargetService : ServiceBase<TargetService>
 				for (int i = this.PinnedActors.Count - 1; i >= 0; i--)
 				{
 					// Skip the player target as it is already updated in the preceding function call
-					if (this.PlayerTarget != null && this.PinnedActors[i].Memory?.Address == this.PlayerTarget.Address)
+					if (this.PlayerTargetHandle != null && this.PinnedActors[i].Memory?.Address == this.PlayerTargetHandle.Address)
 						continue;
 
 					this.PinnedActors[i].Tick();
@@ -583,11 +653,18 @@ public class TargetService : ServiceBase<TargetService>
 	{
 		foreach (var pin in this.PinnedActors)
 		{
-			if (pin.Memory?.IsValid == true)
-			{
-				pin.Memory.RaiseRefreshChanged();
-			}
+			pin.Memory?.Do(a => a.RaiseRefreshChanged());
 		}
+	}
+
+	private async void OnGposeInitialStateResolved()
+	{
+		GposeService.InitialStateResolved -= this.OnGposeInitialStateResolved;
+
+		if (!GameService.GetIsSignedIn())
+			return;
+
+		await PinDefaultActor();
 	}
 
 	private void GposeService_GposeStateChanged(bool newState) => this.RefreshActorRefreshStatus();

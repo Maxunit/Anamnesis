@@ -9,7 +9,6 @@ using Anamnesis.Services;
 using Anamnesis.TexTools;
 using Lumina;
 using Lumina.Excel;
-using Lumina.Excel.Sheets;
 
 /// <summary>
 /// Represents an event non-player character (NPC) in the game data.
@@ -46,7 +45,7 @@ public readonly unsafe struct EventNpc(ExcelPage page, uint offset, uint row)
 	/// <summary>
 	/// Gets a ModelChara reference object of the NPC's model from the game data.
 	/// </summary>
-	public readonly RowRef<ModelChara> ModelChara => new(page.Module, (uint)page.ReadUInt16(offset + 190), page.Language);
+	public readonly RowRef<Lumina.Excel.Sheets.ModelChara> ModelChara => new(page.Module, (uint)page.ReadUInt16(offset + 190), page.Language);
 
 	/// <inheritdoc/>
 	public ImgRef? Icon => null;
@@ -288,7 +287,7 @@ public readonly unsafe struct EventNpc(ExcelPage page, uint offset, uint row)
 	/// <param name="baseVal">The model base value of the item.</param>
 	/// <param name="equipVal">The equipment model value of the item.</param>
 	/// <returns>
-	/// The weapon item from game data, or <see cref="ItemUtility.EmperorsNewFists"/>
+	/// The weapon item from game data, or <see cref="ItemUtility.NoneItem"/>
 	/// if none is found.
 	/// </returns>
 	private static IItem GetWeaponItem(ItemSlots slot, ulong baseVal, ulong? equipVal)
@@ -299,7 +298,7 @@ public readonly unsafe struct EventNpc(ExcelPage page, uint offset, uint row)
 		if (equipVal != null && equipVal != 0 && equipVal != uint.MaxValue && equipVal != long.MaxValue)
 			return LuminaExtensions.GetWeaponItem(slot, (ulong)equipVal);
 
-		return ItemUtility.EmperorsNewFists;
+		return ItemUtility.NoneItem;
 	}
 
 	/// <summary>

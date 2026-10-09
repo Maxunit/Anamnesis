@@ -6,6 +6,7 @@ namespace Anamnesis.Core;
 using Anamnesis.Memory;
 using Anamnesis.Posing;
 using Anamnesis.Services;
+using Microsoft.Extensions.ObjectPool;
 using PropertyChanged;
 using Serilog;
 using System;
@@ -17,7 +18,6 @@ using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 
 /// <summary>
 /// Represents a skeleton of hierarchically-parented bones of an actor that can be posed.
@@ -49,6 +49,11 @@ public class Skeleton : INotifyPropertyChanged
 	private const uint MAX_READ_RETRY_ATTEMPTS = 15;
 
 	/// <summary>
+	/// A shared pool of bone stack structures to reduce memory alloc.
+	/// </summary>
+	private static readonly ObjectPool<Stack<Bone>> s_boneStackPool = ObjectPool.Create<Stack<Bone>>();
+
+	/// <summary>
 	/// A snapshot of the transforms of all bones in the skeleton.
 	/// </summary>
 	/// <remarks>
@@ -63,7 +68,7 @@ public class Skeleton : INotifyPropertyChanged
 
 	/// <summary>Initializes a new instance of the <see cref="Skeleton"/> class.</summary>
 	/// <param name="actor">The actor memory associated with this skeleton.</param>
-	public Skeleton(ActorMemory actor)
+	public Skeleton(ObjectHandle<ActorMemory> actor)
 	{
 		this.Actor = actor;
 		this.SetActor(actor);
@@ -73,46 +78,45 @@ public class Skeleton : INotifyPropertyChanged
 	public event PropertyChangedEventHandler? PropertyChanged;
 
 	/// <summary>Gets the actor memory associated with this skeleton.</summary>
-	public ActorMemory Actor { get; private set; }
+	public ObjectHandle<ActorMemory> Actor { get; private set; }
 
 	/// <summary>Gets the model space root rotation of the skeleton.</summary>
-	public Quaternion RootRotation => this.Actor?.ModelObject?.Transform?.Rotation ?? Quaternion.Identity;
+	public Quaternion RootRotation => this.Actor?.DoRef(a => a.ModelObject)?.Transform?.Rotation ?? Quaternion.Identity;
 
 	/// <summary> Gets a value indicating whether the actor has a tail.</summary>
-	public bool HasTail => this.Actor?.Customize?.Race == ActorCustomizeMemory.Races.Miqote
-		|| this.Actor?.Customize?.Race == ActorCustomizeMemory.Races.AuRa
-		|| this.Actor?.Customize?.Race == ActorCustomizeMemory.Races.Hrothgar
-		|| this.IsIVCS;
+	public bool HasTail => (this.Actor?.Do(a => a.DrawData.Customize?.Race == ActorCustomizeMemory.Races.Miqote
+		|| a.DrawData.Customize?.Race == ActorCustomizeMemory.Races.AuRa
+		|| a.DrawData.Customize?.Race == ActorCustomizeMemory.Races.Hrothgar) == true) || this.IsIVCS;
 
 	/// <summary>Gets a value indicating whether the actor has a standard face.</summary>
 	public bool IsStandardFace => this.Actor == null || (!this.IsMiqote && !this.IsHrothgar && !this.IsViera);
 
 	/// <summary>Gets a value indicating whether the actor is a Miqote.</summary>
-	public bool IsMiqote => this.Actor?.Customize?.Race == ActorCustomizeMemory.Races.Miqote;
+	public bool IsMiqote => this.Actor?.Do(a => a.DrawData.Customize?.Race == ActorCustomizeMemory.Races.Miqote) == true;
 
 	/// <summary>Gets a value indicating whether the actor is a Viera.</summary>
-	public bool IsViera => this.Actor?.Customize?.Race == ActorCustomizeMemory.Races.Viera;
+	public bool IsViera => this.Actor?.Do(a => a.DrawData.Customize?.Race == ActorCustomizeMemory.Races.Viera) == true;
 
 	/// <summary>Gets a value indicating whether the actor is an Elezen.</summary>
-	public bool IsElezen => this.Actor?.Customize?.Race == ActorCustomizeMemory.Races.Elezen;
+	public bool IsElezen => this.Actor?.Do(a => a.DrawData.Customize?.Race == ActorCustomizeMemory.Races.Elezen) == true;
 
 	/// <summary>Gets a value indicating whether the actor is a Hrothgar.</summary>
-	public bool IsHrothgar => this.Actor?.Customize?.Race == ActorCustomizeMemory.Races.Hrothgar;
+	public bool IsHrothgar => this.Actor?.Do(a => a.DrawData.Customize?.Race == ActorCustomizeMemory.Races.Hrothgar) == true;
 
 	/// <summary>Gets a value indicating whether the actor has a tail or ears.</summary>
 	public bool HasTailOrEars => this.IsViera || this.HasTail;
 
 	/// <summary>Gets a value indicating whether the actor is a Viera and has ears type 01.</summary>
-	public bool IsEars01 => this.IsViera && this.Actor?.Customize?.TailEarsType <= 1;
+	public bool IsEars01 => this.IsViera && this.Actor?.Do(a => a.DrawData.Customize?.TailEarsType <= 1) == true;
 
 	/// <summary>Gets a value indicating whether the actor is a Viera and has ears type 02.</summary>
-	public bool IsEars02 => this.IsViera && this.Actor?.Customize?.TailEarsType == 2;
+	public bool IsEars02 => this.IsViera && this.Actor?.Do(a => a.DrawData.Customize?.TailEarsType == 2) == true;
 
 	/// <summary>Gets a value indicating whether the actor is a Viera and has ears type 03.</summary>
-	public bool IsEars03 => this.IsViera && this.Actor?.Customize?.TailEarsType == 3;
+	public bool IsEars03 => this.IsViera && this.Actor?.Do(a => a.DrawData.Customize?.TailEarsType == 3) == true;
 
 	/// <summary>Gets a value indicating whether the actor is a Viera and has ears type 04.</summary>
-	public bool IsEars04 => this.IsViera && this.Actor?.Customize?.TailEarsType == 4;
+	public bool IsEars04 => this.IsViera && this.Actor?.Do(a => a.DrawData.Customize?.TailEarsType == 4) == true;
 
 	/// <summary>Gets a value indicating whether the skeleton has IVCS bones.</summary>
 	public bool IsIVCS { get; private set; }
@@ -125,7 +129,7 @@ public class Skeleton : INotifyPropertyChanged
 			if (!this.IsViera)
 				return false;
 
-			ActorCustomizeMemory? customize = this.Actor?.Customize;
+			ActorCustomizeMemory? customize = this.Actor?.DoRef(a => a.DrawData.Customize);
 
 			if (customize == null)
 				return false;
@@ -174,7 +178,7 @@ public class Skeleton : INotifyPropertyChanged
 	public virtual Bone? GetBone(string name)
 	{
 		// Only process valid skeletons that have atleast one partial skeleton
-		if (this.Actor?.ModelObject?.Skeleton == null || this.Actor.ModelObject.Skeleton.Length <= 0)
+		if (this.Actor?.Do(a => a.ModelObject?.Skeleton == null || a.ModelObject!.Skeleton!.Length <= 0) ?? true)
 			return null;
 
 		string? modernName = LegacyBoneNameConverter.GetModernName(name);
@@ -198,7 +202,7 @@ public class Skeleton : INotifyPropertyChanged
 	/// <summary>Reads the transforms of all bones in the skeleton.</summary>
 	public void ReadTransforms()
 	{
-		if (this.Bones == null || this.Actor?.ModelObject?.Skeleton == null || !GposeService.GetIsGPose())
+		if (this.Bones == null || (this.Actor?.Do(a => a.ModelObject?.Skeleton == null) ?? true) || !GposeService.Instance.IsGpose)
 			return;
 
 		// If history is restoring, wait until it's done.
@@ -215,7 +219,10 @@ public class Skeleton : INotifyPropertyChanged
 
 			foreach (var rootBone in rootBones)
 			{
-				rootBone.ReadTransform(true, snapshot);
+				if (IsBoneOrDescendantDirty(rootBone))
+				{
+					rootBone.ReadTransform(true, snapshot);
+				}
 			}
 		}
 	}
@@ -229,6 +236,40 @@ public class Skeleton : INotifyPropertyChanged
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	protected static string ConvertBoneName(string? prefix, string name) => prefix != null ? prefix + name : name;
 
+	/// <summary>
+	/// Checks if the given bone or any of its descendants are dirty
+	/// (i.e., have been modified) but not yet written back to game memory.
+	/// </summary>
+	/// <param name="root">The root bone to check.</param>
+	/// <returns>
+	/// True if the bone or any of its descendants are dirty; otherwise, false.
+	/// </returns>
+	protected static bool IsBoneOrDescendantDirty(Bone root)
+	{
+		var stack = s_boneStackPool.Get();
+		try
+		{
+			stack.Push(root);
+
+			while (stack.Count > 0)
+			{
+				var current = stack.Pop();
+				if (current.IsDirty)
+					return true;
+
+				foreach (var child in current.Children)
+					stack.Push(child);
+			}
+
+			return false;
+		}
+		finally
+		{
+			stack.Clear();
+			s_boneStackPool.Return(stack);
+		}
+	}
+
 	/// <summary>Takes a snapshot of the current transforms of all bones.</summary>
 	/// <remarks>
 	/// The intended use of this method is to speed up memory reads by reading all bone transforms at once.
@@ -240,85 +281,85 @@ public class Skeleton : INotifyPropertyChanged
 		{
 			this.snapshot.Clear();
 
-			if (this.Actor?.ModelObject?.Skeleton == null)
-				return this.snapshot;
-
-			this.Actor.ModelObject.Skeleton.EnableReading = false;
-
-			foreach (var (name, bone) in this.Bones)
+			return this.Actor?.DoRef(a =>
 			{
-				var transform = bone.TransformMemory;
-				if (transform == null)
-					continue;
+				if (a.ModelObject == null || a.ModelObject?.Skeleton == null)
+					return this.snapshot;
 
-				this.snapshot[name] = new Transform
+				foreach (var (name, bone) in this.Bones)
 				{
-					Position = transform.Position,
-					Rotation = transform.Rotation,
-					Scale = transform.Scale,
-				};
-			}
+					var transform = bone.TransformMemory;
+					if (transform == null)
+						continue;
 
-			this.Actor.ModelObject.Skeleton.EnableReading = true;
+					this.snapshot[name] = new Transform
+					{
+						Position = transform.Position,
+						Rotation = transform.Rotation,
+						Scale = transform.Scale,
+					};
+				}
 
-			return this.snapshot;
+				return this.snapshot;
+			}) ?? [];
 		}
 	}
 
 	/// <summary>Sets the actor memory for the skeleton and initializes all bones.</summary>
 	/// <param name="actor">The actor memory to set.</param>
-	protected virtual void SetActor(ActorMemory actor)
+	/// <param name="onlyAddBones">
+	/// If true, only adds bones without setting up links or reading transforms.
+	/// </param>
+	protected virtual void SetActor(ObjectHandle<ActorMemory> actor, bool onlyAddBones = false)
 	{
 		this.Actor = actor;
 
 		this.Clear();
 
-		if (!GposeService.Instance.IsGpose || this.Actor?.ModelObject?.Skeleton == null)
-			return;
-
-		actor.PauseSynchronization = true;
-
-		// Get all bones
-		this.AddBones(this.Actor.ModelObject.Skeleton);
-
-		if (this.Actor.MainHand?.Model?.Skeleton != null)
-			this.AddBones(this.Actor.MainHand.Model.Skeleton, "mh_");
-
-		if (this.Actor.OffHand?.Model?.Skeleton != null)
-			this.AddBones(this.Actor.OffHand.Model.Skeleton, "oh_");
-
-		actor.PauseSynchronization = false;
-
-		// Create Bone links from the link database
-		foreach ((string name, Bone bone) in this.Bones)
+		this.Actor.Do(a =>
 		{
-			foreach (LinkedBones.LinkSet links in LinkedBones.Links)
+			if (!GposeService.Instance.IsGpose || a.ModelObject?.Skeleton == null)
+				return;
+
+			// Get all bones
+			this.AddBones(a.ModelObject.Skeleton);
+
+			if (a.DrawData.MainHand?.Model?.Skeleton != null)
+				this.AddBones(a.DrawData.MainHand.Model.Skeleton, "mh_");
+
+			if (a.DrawData.OffHand?.Model?.Skeleton != null)
+				this.AddBones(a.DrawData.OffHand.Model.Skeleton, "oh_");
+
+			// Create Bone links from the link database
+			foreach ((string name, Bone bone) in this.Bones)
 			{
-				if (links.Tribe != null && this.Actor?.Customize?.Tribe != links.Tribe)
-					continue;
-
-				if (links.Gender != null && this.Actor?.Customize?.Gender != links.Gender)
-					continue;
-
-				if (!links.Contains(name))
-					continue;
-
-				foreach (string linkedBoneName in links.Bones)
+				foreach (LinkedBones.LinkSet links in LinkedBones.Links)
 				{
-					if (linkedBoneName == name)
+					if (links.Tribe != null && a.DrawData.Customize?.Tribe != links.Tribe)
 						continue;
 
-					Bone? linkedBone = this.GetBone(linkedBoneName);
-
-					if (linkedBone == null)
+					if (links.Gender != null && a.DrawData.Customize?.Gender != links.Gender)
 						continue;
 
-					bone.LinkedBones.Add(linkedBone);
+					if (!links.Contains(name))
+						continue;
+
+					foreach (string linkedBoneName in links.Bones)
+					{
+						if (linkedBoneName == name)
+							continue;
+
+						Bone? linkedBone = this.GetBone(linkedBoneName);
+
+						if (linkedBone == null)
+							continue;
+
+						bone.LinkedBones.Add(linkedBone);
+					}
 				}
 			}
-		}
+		});
 
-		// Read the initial transforms of all bones
 		var snapshot = this.TakeSnapshot();
 		var rootBones = new List<Bone>();
 		foreach (var bone in this.Bones.Values)
@@ -347,105 +388,49 @@ public class Skeleton : INotifyPropertyChanged
 	/// <param name="namePrefix">An optional prefix to add to the bone names.</param>
 	protected virtual void AddBones(SkeletonMemory skeleton, string? namePrefix = null)
 	{
-		var partialTasks = new List<Task>();
-
 		for (int partialSkeletonIndex = 0; partialSkeletonIndex < skeleton.Length; partialSkeletonIndex++)
 		{
 			int index = partialSkeletonIndex;
-			partialTasks.Add(Task.Run(() =>
+			PartialSkeletonMemory partialSkeleton = skeleton[index];
+			HkaPoseMemory? bestHkaPose = partialSkeleton.Pose1;
+
+			if (bestHkaPose == null ||
+				bestHkaPose.Skeleton?.Bones == null ||
+				bestHkaPose.Skeleton?.ParentIndices == null ||
+				bestHkaPose.Transforms == null)
 			{
-				PartialSkeletonMemory partialSkeleton = skeleton[index];
-				HkaPoseMemory? bestHkaPose = null;
-				int retryCount = 0;
+				Log.Verbose("Unable to find best pose for partial skeleton.");
+				continue;
+			}
 
-				while (retryCount < MAX_READ_RETRY_ATTEMPTS)
+			int count = bestHkaPose.Transforms.Length;
+
+			// Load all bones first
+			for (int boneIndex = 0; boneIndex < count; boneIndex++)
+			{
+				string originalName = bestHkaPose.Skeleton.Bones[boneIndex].Name.ToString();
+				string name = ConvertBoneName(namePrefix, originalName);
+				TransformMemory? transform = bestHkaPose.Transforms[boneIndex];
+
+				if (!this.Bones.TryGetValue(name, out var currentBone))
 				{
-					try
+					currentBone = this.CreateBone(this, [transform], name, index)
+						?? throw new Exception($"Failed to create bone: {name}");
+
+					this.Bones[name] = currentBone;
+				}
+				else
+				{
+					lock (currentBone.TransformMemories)
 					{
-						bestHkaPose = partialSkeleton.Pose1;
-
-						if (bestHkaPose == null ||
-							bestHkaPose.Skeleton?.Bones == null ||
-							bestHkaPose.Skeleton?.ParentIndices == null ||
-							bestHkaPose.Transforms == null)
-							throw new Exception("Failed to find best Havok pose for partial skeleton");
-
-						break;
-					}
-					catch (Exception ex)
-					{
-						Log.Verbose(ex, $"{ex.Message}. Retrying... ({retryCount + 1}/{MAX_READ_RETRY_ATTEMPTS})");
-
-						retryCount++;
-						if (retryCount >= MAX_READ_RETRY_ATTEMPTS)
-						{
-							Log.Warning("Max retry attempts reached. Unable to find best pose for partial skeleton.");
-							return; // Skip this partial skeleton
-						}
-
-						Task.Delay(16).Wait();
-						partialSkeleton.Synchronize();
+						currentBone.TransformMemories.Add(transform);
 					}
 				}
 
-				if (bestHkaPose == null || bestHkaPose.Skeleton?.Bones == null || bestHkaPose.Skeleton?.ParentIndices == null || bestHkaPose.Transforms == null)
-				{
-					Log.Verbose("Failed to find best HkaSkeleton for partial skeleton");
-					return;
-				}
-
-				int count = bestHkaPose.Transforms.Length;
-
-				// Load all bones first
-				for (int boneIndex = 0; boneIndex < count; boneIndex++)
-				{
-					retryCount = 0;
-					while (retryCount < MAX_READ_RETRY_ATTEMPTS)
-					{
-						try
-						{
-							string originalName = bestHkaPose.Skeleton.Bones[boneIndex].Name.ToString();
-							string name = ConvertBoneName(namePrefix, originalName);
-							TransformMemory? transform = bestHkaPose.Transforms[boneIndex];
-
-							if (!this.Bones.TryGetValue(name, out var currentBone))
-							{
-								currentBone = this.CreateBone(this, [transform], name, index);
-								if (currentBone == null)
-									throw new Exception($"Failed to create bone: {name}");
-
-								this.Bones[name] = currentBone;
-							}
-							else
-							{
-								lock (currentBone.TransformMemories)
-								{
-									currentBone.TransformMemories.Add(transform);
-								}
-							}
-
-							if (originalName == "n_root")
-								currentBone.IsTransformLocked = true;
-
-							break;
-						}
-						catch (ArgumentOutOfRangeException ex)
-						{
-							Log.Warning(ex, $"Failed to locate bone at index {boneIndex}. Retrying... ({retryCount + 1}/{MAX_READ_RETRY_ATTEMPTS})");
-
-							retryCount++;
-							if (retryCount >= MAX_READ_RETRY_ATTEMPTS)
-								throw;
-
-							Task.Delay(16).Wait();
-							bestHkaPose.Skeleton.Synchronize();
-						}
-					}
-				}
-			}));
+				if (originalName == "n_root")
+					currentBone.IsTransformLocked = true;
+			}
 		}
-
-		Task.WaitAll(partialTasks.ToArray());
 
 		// Set parents now that all bones are loaded
 		for (int partialSkeletonIndex = 0; partialSkeletonIndex < skeleton.Length; partialSkeletonIndex++)

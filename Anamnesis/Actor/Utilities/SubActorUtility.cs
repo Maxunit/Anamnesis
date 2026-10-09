@@ -24,7 +24,7 @@ public class SubActorUtility
 			memory.Mount.Scale = mountScale;
 
 			Apply(mount, memory.Mount);
-			Task.Run(memory.Refresh);
+			Task.Run(() => memory.Refresh(true));
 		}
 		else
 		{
@@ -64,7 +64,11 @@ public class SubActorUtility
 		try
 		{
 			CharacterFile apFile = npc.ToFile();
-			apFile.Apply(targetActor, CharacterFile.SaveModes.EquipmentGear);
+			var handle = ActorService.Instance.ObjectTable.Get<ActorMemory>(targetActor.Address);
+			if (handle != null)
+			{
+				apFile.Apply(handle, CharacterFile.SaveModes.EquipmentGear);
+			}
 		}
 		catch (Exception ex)
 		{
@@ -74,19 +78,20 @@ public class SubActorUtility
 
 	private static float CalculateMountScale(Mount mount, ActorMemory memory)
 	{
-		if (memory.Customize == null)
+		var actorCustomize = memory.DrawData.Customize;
+		if (actorCustomize == null)
 			return 1.0f;
 
 		var mountCustomize = GameDataService.MountCustomize.GetRow(mount.MountCustomizeRow);
 		int mountScaleFactor = 100;
 
-		switch (memory.Customize.Race)
+		switch (actorCustomize.Race)
 		{
 			case ActorCustomizeMemory.Races.Hyur:
-				switch (memory.Customize.Gender)
+				switch (actorCustomize.Gender)
 				{
 					case ActorCustomizeMemory.Genders.Masculine:
-						switch (memory.Customize.Tribe)
+						switch (actorCustomize.Tribe)
 						{
 							case ActorCustomizeMemory.Tribes.Midlander:
 								mountScaleFactor = mountCustomize.HyurMidlanderMaleScale;
@@ -99,7 +104,7 @@ public class SubActorUtility
 						break;
 
 					case ActorCustomizeMemory.Genders.Feminine:
-						switch (memory.Customize.Tribe)
+						switch (actorCustomize.Tribe)
 						{
 							case ActorCustomizeMemory.Tribes.Midlander:
 								mountScaleFactor = mountCustomize.HyurMidlanderFemaleScale;
@@ -115,7 +120,7 @@ public class SubActorUtility
 				break;
 
 			case ActorCustomizeMemory.Races.Elezen:
-				switch (memory.Customize.Gender)
+				switch (actorCustomize.Gender)
 				{
 					case ActorCustomizeMemory.Genders.Masculine:
 						mountScaleFactor = mountCustomize.ElezenMaleScale;
@@ -129,7 +134,7 @@ public class SubActorUtility
 				break;
 
 			case ActorCustomizeMemory.Races.Lalafel:
-				switch (memory.Customize.Gender)
+				switch (actorCustomize.Gender)
 				{
 					case ActorCustomizeMemory.Genders.Masculine:
 						mountScaleFactor = mountCustomize.LalaMaleScale;
@@ -143,7 +148,7 @@ public class SubActorUtility
 				break;
 
 			case ActorCustomizeMemory.Races.Miqote:
-				switch (memory.Customize.Gender)
+				switch (actorCustomize.Gender)
 				{
 					case ActorCustomizeMemory.Genders.Masculine:
 						mountScaleFactor = mountCustomize.MiqoMaleScale;
@@ -157,7 +162,7 @@ public class SubActorUtility
 				break;
 
 			case ActorCustomizeMemory.Races.Roegadyn:
-				switch (memory.Customize.Gender)
+				switch (actorCustomize.Gender)
 				{
 					case ActorCustomizeMemory.Genders.Masculine:
 						mountScaleFactor = mountCustomize.RoeMaleScale;
@@ -171,7 +176,7 @@ public class SubActorUtility
 				break;
 
 			case ActorCustomizeMemory.Races.AuRa:
-				switch (memory.Customize.Gender)
+				switch (actorCustomize.Gender)
 				{
 					case ActorCustomizeMemory.Genders.Masculine:
 						mountScaleFactor = mountCustomize.AuRaMaleScale;
@@ -185,7 +190,7 @@ public class SubActorUtility
 				break;
 
 			case ActorCustomizeMemory.Races.Hrothgar:
-				switch (memory.Customize.Gender)
+				switch (actorCustomize.Gender)
 				{
 					case ActorCustomizeMemory.Genders.Masculine:
 						mountScaleFactor = mountCustomize.HrothgarMaleScale;
@@ -198,7 +203,7 @@ public class SubActorUtility
 				break;
 
 			case ActorCustomizeMemory.Races.Viera:
-				switch (memory.Customize.Gender)
+				switch (actorCustomize.Gender)
 				{
 					case ActorCustomizeMemory.Genders.Masculine:
 						mountScaleFactor = mountCustomize.VieraMaleScale;

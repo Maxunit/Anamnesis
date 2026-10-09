@@ -1,15 +1,15 @@
-﻿<local:EquipmentSelectorDrawer x:Class="Anamnesis.Actor.Views.EquipmentSelector"
+<local:EquipmentSelectorDrawer x:Class="Anamnesis.Actor.Views.EquipmentSelector"
 			 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			 xmlns:controls="clr-namespace:Anamnesis.Styles.Controls"
 			 xmlns:drawers="clr-namespace:Anamnesis.Styles.Drawers"
 			 xmlns:fa="http://schemas.awesome.incremented/wpf/xaml/fontawesome.sharp"
 			 xmlns:XivToolsWpf="clr-namespace:XivToolsWpf.Controls;assembly=XivToolsWpf"
-			 xmlns:xivToolsWpfSelectors="clr-namespace:XivToolsWpf.Selectors;assembly=XivToolsWpf" 
-			 xmlns:local="clr-namespace:Anamnesis.Actor.Views" 
-			 mc:Ignorable="d" 
+			 xmlns:xivToolsWpfSelectors="clr-namespace:XivToolsWpf.Selectors;assembly=XivToolsWpf"
+			 xmlns:local="clr-namespace:Anamnesis.Actor.Views"
+			 mc:Ignorable="d"
 			 d:DesignHeight="450">
 
 	<UserControl.Resources>
@@ -19,7 +19,7 @@
 		</Style>
 	</UserControl.Resources>
 
-	<Grid x:Name="ContentArea">
+	<Grid x:Name="ContentArea" IsEnabled="{Binding CanEditItem, Mode=OneWay}">
 
 		<Grid.ColumnDefinitions>
 			<ColumnDefinition Width="Auto"/>
@@ -92,8 +92,8 @@
 				</ToggleButton.ToolTip>
 
 				<StackPanel Orientation="Horizontal">
-					<XivToolsWpf:IconBlock Icon="AngleLeft" Margin="0, 0, 6, 0"/>
-					<XivToolsWpf:IconBlock Icon="Filter"/>
+					<fa:IconBlock Icon="AngleLeft" Margin="0, 0, 6, 0"/>
+					<fa:IconBlock Icon="Filter"/>
 				</StackPanel>
 			</ToggleButton>
 
@@ -118,9 +118,12 @@
 
 		<ComboBox Grid.Row="0"
 				  Grid.Column="1"
-				  Margin="6, 3, 6, 0"
+				  Margin="6, 0, 6, 0"
 				  Height="22"
+				  MinWidth="22"
 				  HorizontalAlignment="Right"
+				  VerticalContentAlignment="Center"
+				  Foreground="{DynamicResource MaterialDesignBodyLight}"
 				  Style="{StaticResource MaterialDesignDataGridComboBox}"
 				  SelectedIndex="{Binding SortModeInt, Mode=TwoWay}">
 
@@ -133,7 +136,7 @@
 					<XivToolsWpf:TextBlock Key="EquipmentSelector_SortAlpha" />
 				</ComboBoxItem.ToolTip>
 
-				<XivToolsWpf:IconBlock Icon="SortAlphaDown" FontSize="16"/>
+				<fa:IconBlock Icon="SortAlphaDown" FontSize="13"/>
 			</ComboBoxItem>
 
 			<ComboBoxItem>
@@ -141,7 +144,7 @@
 					<XivToolsWpf:TextBlock Key="EquipmentSelector_SortRow" />
 				</ComboBoxItem.ToolTip>
 
-				<XivToolsWpf:IconBlock Icon="CalendarAlt" FontSize="16"/>
+				<fa:IconBlock Icon="CalendarAlt" FontSize="13"/>
 			</ComboBoxItem>
 
 			<ComboBoxItem>
@@ -149,7 +152,7 @@
 					<XivToolsWpf:TextBlock Key="EquipmentSelector_SortLevel" />
 				</ComboBoxItem.ToolTip>
 
-				<XivToolsWpf:IconBlock Icon="SortAmountDown" FontSize="16"/>
+				<fa:IconBlock Icon="SortAmountDown" FontSize="13"/>
 			</ComboBoxItem>
 
 		</ComboBox>
@@ -160,21 +163,28 @@
 					Margin="6, 0, 0, 0"
 					Visibility="{Binding IsWeaponSlot, Converter={StaticResource B2V}}">
 
-			<CheckBox Padding="3" IsChecked="{Binding AutoOffhand}" Visibility="{Binding IsMainHandSlot, Converter={StaticResource B2V}}">
+			<CheckBox Padding="2, 1" IsChecked="{Binding AutoOffhand}" Visibility="{Binding IsMainHandSlot, Converter={StaticResource B2V}}">
 				<CheckBox.ToolTip>
 					<XivToolsWpf:TextBlock Key="EquipmentSelector_AutoOffhandTip"/>
 				</CheckBox.ToolTip>
 				<XivToolsWpf:TextBlock Key="EquipmentSelector_AutoOffhand"/>
 			</CheckBox>
 
-			<CheckBox Padding="3" IsChecked="{Binding ForceMainModel}" Visibility="{Binding IsOffHandSlot, Converter={StaticResource B2V}}">
+			<CheckBox Padding="2, 1" IsChecked="{Binding LinkDyes}">
+				<CheckBox.ToolTip>
+					<XivToolsWpf:TextBlock Key="EquipmentSelector_LinkDyesTip"/>
+				</CheckBox.ToolTip>
+				<XivToolsWpf:TextBlock Key="EquipmentSelector_LinkDyes"/>
+			</CheckBox>
+
+			<CheckBox Padding="2, 1" IsChecked="{Binding ForceMainModel}" Visibility="{Binding IsOffHandSlot, Converter={StaticResource B2V}}">
 				<CheckBox.ToolTip>
 					<XivToolsWpf:TextBlock Key="EquipmentSelector_ForceMainModelTooltip"/>
 				</CheckBox.ToolTip>
 				<XivToolsWpf:TextBlock Key="EquipmentSelector_ForceMainModel"/>
 			</CheckBox>
 
-			<CheckBox Padding="3" IsChecked="{Binding ForceOffModel}" Visibility="{Binding IsMainHandSlot, Converter={StaticResource B2V}}">
+			<CheckBox Padding="2, 1" IsChecked="{Binding ForceOffModel}" Visibility="{Binding IsMainHandSlot, Converter={StaticResource B2V}}">
 				<CheckBox.ToolTip>
 					<XivToolsWpf:TextBlock Key="EquipmentSelector_ForceOffModelTooltip"/>
 				</CheckBox.ToolTip>
@@ -221,7 +231,7 @@
 								   TextTrimming="CharacterEllipsis"
 								   VerticalAlignment="Center"/>
 
-						<!--<fa:IconBlock Icon="pen" FontSize="8" Visibility="{Binding Mod, Converter={StaticResource NotNullToVisibilityConverter}}"/>-->
+						<!--<fa:IconBlock Icon="Pen" FontSize="8" Visibility="{Binding Mod, Converter={StaticResource NotNullToVisibilityConverter}}"/>-->
 						<Grid Grid.Row="1" Grid.Column="1">
 							<Grid.ColumnDefinitions>
 								<ColumnDefinition Width="Auto"/>
@@ -305,8 +315,8 @@
 								<Grid>
 									<fa:IconBlock Icon="Star" FontSize="13" Opacity="0.25"
 												  Visibility="{Binding IsFavorite, IsAsync=True, Converter={StaticResource !B2V}, FallbackValue=Visible}"/>
-									<XivToolsWpf:IconBlock Icon="Star" FontSize="13"
-														   Visibility="{Binding IsFavorite, IsAsync=True, Converter={StaticResource B2V}, FallbackValue=Collapsed}"/>
+									<fa:IconBlock Icon="Star" FontSize="13" IconFont="Solid"
+												  Visibility="{Binding IsFavorite, IsAsync=True, Converter={StaticResource B2V}, FallbackValue=Collapsed}"/>
 								</Grid>
 							</ToggleButton>
 

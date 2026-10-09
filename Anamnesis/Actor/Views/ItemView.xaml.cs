@@ -1,4 +1,4 @@
-﻿// © Anamnesis.
+// © Anamnesis.
 // Licensed under the MIT license.
 
 namespace Anamnesis.Actor.Views;
@@ -75,14 +75,34 @@ public partial class ItemView : UserControl
 		set => WeaponExModelDp.Set(this, value);
 	}
 
+	[DependsOn(nameof(Slot))]
 	public string SlotName => LocalizationService.GetString("Character_Equipment_" + this.Slot);
 
+	[DependsOn(nameof(Slot))]
 	public bool IsWeapon => (this.Slot & ItemSlots.Weapons) != 0;
 
+	[DependsOn(nameof(Slot))]
 	public bool IsHead => this.Slot == ItemSlots.Head;
 
+	[DependsOn(nameof(Slot))]
 	public bool SupportsEarToggle => this.Slot == ItemSlots.Head
-		&& this.Actor?.Customize?.Race == ActorCustomizeMemory.Races.Viera;
+		&& this.Actor?.DrawData.Customize?.Race == ActorCustomizeMemory.Races.Viera;
+
+	[DependsOn(nameof(IsWeapon))]
+	public bool CanEditItem => !this.IsWeapon || GposeService.InstanceOrNull?.IsGpose == true;
+
+	[DependsOn(nameof(IsWeapon))]
+	public bool ShowWeaponWarning => this.IsWeapon && GposeService.InstanceOrNull?.IsGpose != true;
+
+	public bool LinkWeaponDyes
+	{
+		get => EquipmentSelector.LinkWeaponDyes;
+		set
+		{
+			EquipmentSelector.LinkWeaponDyes = value;
+			this.OnPropertyChanged(nameof(this.LinkWeaponDyes));
+		}
+	}
 
 	public bool IsValidWeapon
 	{
@@ -146,6 +166,17 @@ public partial class ItemView : UserControl
 		}
 	}
 
+	private WeaponMemory? PartnerWeapon
+	{
+		get
+		{
+			if (!this.IsWeapon || !EquipmentSelector.LinkWeaponDyes || this.Actor?.DrawData == null)
+				return null;
+
+			return (this.Slot == ItemSlots.MainHand) ? this.Actor.DrawData.OffHand : (this.Slot == ItemSlots.OffHand) ? this.Actor.DrawData.MainHand : null;
+		}
+	}
+
 	private static void OnItemModelChanged(ItemView sender, IEquipmentItemMemory? value)
 	{
 		if (sender.ItemModel != null)
@@ -183,6 +214,21 @@ public partial class ItemView : UserControl
 				weaponView.Dye = 0;
 			}
 		}
+	}
+
+	private static bool MatchesWeapon(IItem item, WeaponMemory weaponVm, ItemSlots slot)
+	{
+		// For off-hand paired weapons, match against the submodel
+		if (slot == ItemSlots.OffHand && item.HasSubModel)
+		{
+			return item.SubModelSet == weaponVm.Set
+				&& item.SubModelBase == weaponVm.Base
+				&& item.SubModelVariant == weaponVm.Variant;
+		}
+
+		return item.ModelSet == weaponVm.Set
+			&& item.ModelBase == weaponVm.Base
+			&& item.ModelVariant == weaponVm.Variant;
 	}
 
 	private void OnOpenInConsoleGamesWikiClicked(object sender, RoutedEventArgs e)
@@ -268,6 +314,33 @@ public partial class ItemView : UserControl
 		}
 	}
 
+	private void SetDye(byte dyeId, bool isDye2)
+	{
+		if (this.ItemModel == null)
+			return;
+
+		if (isDye2)
+		{
+			this.ItemModel.Dye2 = dyeId;
+		}
+		else
+		{
+			this.ItemModel.Dye = dyeId;
+		}
+
+		if (this.PartnerWeapon is WeaponMemory partner)
+		{
+			if (isDye2)
+			{
+				partner.Dye2 = dyeId;
+			}
+			else
+			{
+				partner.Dye = dyeId;
+			}
+		}
+	}
+
 	private void OnDyeMouseUp(object sender, MouseButtonEventArgs e)
 	{
 		if (this.Actor?.CanRefresh != true || this.ItemModel == null)
@@ -275,7 +348,7 @@ public partial class ItemView : UserControl
 
 		if (e.ChangedButton == MouseButton.Middle && e.ButtonState == MouseButtonState.Released)
 		{
-			this.ItemModel.Dye = 0;
+			this.SetDye(0, isDye2: false);
 		}
 	}
 
@@ -286,13 +359,30 @@ public partial class ItemView : UserControl
 
 		if (e.ChangedButton == MouseButton.Middle && e.ButtonState == MouseButtonState.Released)
 		{
-			this.ItemModel.Dye2 = 0;
+			this.SetDye(0, isDye2: true);
 		}
+	}
+
+	private void OnSwapDyeChannels(object sender, RoutedEventArgs e)
+	{
+		this.ItemModel?.SwapDyeChannels();
+		this.PartnerWeapon?.SwapDyeChannels();
+	}
+
+	private void OnToggleLinkDyes(object sender, RoutedEventArgs e)
+	{
+		this.LinkWeaponDyes = !this.LinkWeaponDyes;
 	}
 
 	private void SetItem(IItem? item, bool autoOffhand = false, bool forceMain = false, bool forceOff = false)
 	{
+		if (this.IsWeapon && GposeService.InstanceOrNull?.IsGpose != true)
+			return;
+
 		this.lockViewModel = true;
+
+		if (this.ItemModel != null)
+			this.ItemModel.EquippedItem = item;
 
 		if (item != null)
 		{
@@ -316,17 +406,27 @@ public partial class ItemView : UserControl
 
 			SetModel(this.ItemModel, modelSet, modelBase, modelVariant);
 
-			if (autoOffhand && this.Slot == ItemSlots.MainHand
-				&& item is Item ivm
-				&& ivm.EquipSlotCategory.Value.OffHand == -1)
+			if (autoOffhand && this.Slot == ItemSlots.MainHand && item is Item ivm)
 			{
 				if (ivm.HasSubModel)
 				{
-					SetModel(this.Actor?.OffHand, ivm.SubModelSet, ivm.SubModelBase, ivm.SubModelVariant);
+					SetModel(this.Actor?.DrawData.OffHand, ivm.SubModelSet, ivm.SubModelBase, ivm.SubModelVariant);
+
+					if (this.Actor?.DrawData.OffHand is WeaponMemory offWeapon)
+					{
+						offWeapon.EquippedItem = ivm;
+						if (EquipmentSelector.LinkWeaponDyes && this.ItemModel != null)
+						{
+							offWeapon.Dye = this.ItemModel.Dye;
+							offWeapon.Dye2 = this.ItemModel.Dye2;
+						}
+					}
 				}
 				else
 				{
-					SetModel(this.Actor?.OffHand, 0, 0, 0);
+					SetModel(this.Actor?.DrawData.OffHand, 0, 0, 0);
+					if (this.Actor?.DrawData.OffHand is WeaponMemory offWeapon)
+						offWeapon.EquippedItem = ItemUtility.NoneItem;
 				}
 			}
 
@@ -348,16 +448,9 @@ public partial class ItemView : UserControl
 
 		SelectorDrawer.Show<DyeSelector, IDye>(this.Dye, (v) =>
 		{
-			if (v == null)
-				return;
-
-			if (this.ItemModel is ItemMemory item)
+			if (v != null)
 			{
-				item.Dye = v.Id;
-			}
-			else if (this.ItemModel is WeaponMemory weapon)
-			{
-				weapon.Dye = v.Id;
+				this.SetDye(v.Id, isDye2: false);
 			}
 		});
 	}
@@ -369,16 +462,9 @@ public partial class ItemView : UserControl
 
 		SelectorDrawer.Show<DyeSelector, IDye>(this.Dye2, (v) =>
 		{
-			if (v == null)
-				return;
-
-			if (this.ItemModel is ItemMemory item)
+			if (v != null)
 			{
-				item.Dye2 = v.Id;
-			}
-			else if (this.ItemModel is WeaponMemory weapon)
-			{
-				weapon.Dye2 = v.Id;
+				this.SetDye(v.Id, isDye2: true);
 			}
 		});
 	}
@@ -414,7 +500,15 @@ public partial class ItemView : UserControl
 
 				if (valueVm is ItemMemory itemVm)
 				{
-					IItem? item = ItemUtility.GetItem(slots, 0, itemVm.Base, itemVm.Variant, this.Actor.IsChocobo);
+					// Do not re-fetch if the selected item is the same as the current item
+					IItem? item = itemVm.EquippedItem ?? this.Item;
+					if (item == null || item.ModelBase != itemVm.Base || item.ModelVariant != itemVm.Variant)
+					{
+						item = ItemUtility.GetItem(slots, 0, itemVm.Base, itemVm.Variant, this.Actor.IsChocobo);
+					}
+
+					itemVm.EquippedItem = item;
+
 					IDye? dye;
 					IDye? dye2;
 
@@ -444,7 +538,21 @@ public partial class ItemView : UserControl
 				}
 				else if (valueVm is WeaponMemory weaponVm)
 				{
-					IItem? item = ItemUtility.GetItem(slots, weaponVm.Set, weaponVm.Base, weaponVm.Variant, this.Actor.IsChocobo);
+					// Do not re-fetch if the selected item is the same as the current item
+					IItem? item = weaponVm.EquippedItem ?? this.Item;
+
+					// Check if the main hand already has a paired sub-model matching the off-hand
+					if (item == null && slots == ItemSlots.OffHand && this.Actor.DrawData.MainHand?.EquippedItem is IItem mainItem && MatchesWeapon(mainItem, weaponVm, slots))
+					{
+						item = mainItem;
+					}
+
+					if (item == null || !MatchesWeapon(item, weaponVm, slots))
+					{
+						item = ItemUtility.GetItem(slots, weaponVm.Set, weaponVm.Base, weaponVm.Variant, this.Actor.IsChocobo);
+					}
+
+					weaponVm.EquippedItem = item;
 
 					if (weaponVm.Set == 0)
 						weaponVm.Dye = 0;
@@ -490,13 +598,13 @@ public partial class ItemView : UserControl
 
 	private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
 	{
-		if (this.Actor?.Customize != null)
-			this.Actor.Customize.PropertyChanged -= this.OnActorCustomizePropertyChanged;
+		if (this.Actor?.DrawData.Customize != null)
+			this.Actor.DrawData.Customize.PropertyChanged -= this.OnActorCustomizePropertyChanged;
 
 		this.Actor = this.DataContext as ActorMemory;
 
-		if (this.Actor?.Customize != null)
-			this.Actor.Customize.PropertyChanged += this.OnActorCustomizePropertyChanged;
+		if (this.Actor?.DrawData.Customize != null)
+			this.Actor.DrawData.Customize.PropertyChanged += this.OnActorCustomizePropertyChanged;
 
 		this.OnPropertyChanged(nameof(this.SupportsEarToggle));
 	}
@@ -505,12 +613,25 @@ public partial class ItemView : UserControl
 	{
 		if (LocalizationService.Instance != null)
 			LocalizationService.Instance.LocaleChanged += this.OnLocaleChanged;
+
+		GposeService.GposeStateChanged += this.OnGposeStateChanged;
+		this.OnGposeStateChanged(GposeService.Instance?.IsGpose ?? false);
 	}
 
 	private void OnUnloaded(object sender, RoutedEventArgs e)
 	{
 		if (LocalizationService.Instance != null)
 			LocalizationService.Instance.LocaleChanged -= this.OnLocaleChanged;
+
+		GposeService.GposeStateChanged -= this.OnGposeStateChanged;
+	}
+
+	private async void OnGposeStateChanged(bool state)
+	{
+		await Dispatch.MainThread();
+
+		this.OnPropertyChanged(nameof(this.CanEditItem));
+		this.OnPropertyChanged(nameof(this.ShowWeaponWarning));
 	}
 
 	private void OnLocaleChanged()

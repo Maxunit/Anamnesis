@@ -3,9 +3,9 @@
 
 namespace Anamnesis;
 
+using Anamnesis.Actor.Pages;
 using Anamnesis.Core;
 using Anamnesis.Files;
-using Anamnesis.Memory;
 using Anamnesis.Services;
 using PropertyChanged;
 using System;
@@ -75,36 +75,31 @@ public class AutoSaveService : ServiceBase<AutoSaveService>
 			if (!Directory.Exists(charDirPath))
 				Directory.CreateDirectory(charDirPath);
 
+			int index = 0;
 			foreach (var pinnedActor in TargetService.Instance.PinnedActors.ToList())
 			{
-				var actor = pinnedActor.Memory;
-				if (actor == null)
+				var handle = pinnedActor.Memory;
+				if (handle == null)
 					continue;
 
 				CharacterFile file = new();
-				string fullFilePath = Path.Combine(charDirPath, $"{actor.Name}{file.FileExtension}");
+				string fullFilePath = Path.Combine(charDirPath, $"{handle.DoRef(a => a.Name) ?? $"Unknown - {index}"}{file.FileExtension}");
 				if (fullFilePath.Any(c => invalidPathChars.Contains(c)))
 				{
 					Log.Error($"Invalid character file path: {fullFilePath}");
 					break;
 				}
 
-				file.WriteToFile(actor, CharacterFile.SaveModes.All);
+				file.WriteToFile(handle, CharacterFile.SaveModes.All);
 				using FileStream stream = new(fullFilePath, FileMode.Create);
 				file.Serialize(stream);
+				index++;
 			}
 
-			if (GposeService.Instance.IsGpose)
+			void PerformCameraAndPoseAutoSave()
 			{
-				ActorMemory? actorMemory = null;
-				ActorBasicMemory? targetActor = TargetService.Instance.PlayerTarget;
-				if (targetActor != null && targetActor.IsValid)
-				{
-					actorMemory = new ActorMemory();
-					actorMemory.SetAddress(targetActor.Address);
-				}
-
-				if (actorMemory != null)
+				var targetActorHandle = TargetService.Instance.PlayerTargetHandle;
+				if (targetActorHandle != null)
 				{
 					// Save the current camera configuration
 					string camShotsDir = Path.Combine(dirPath, "CameraShots");
@@ -116,7 +111,7 @@ public class AutoSaveService : ServiceBase<AutoSaveService>
 					if (fullFilePath.Any(c => invalidPathChars.Contains(c)))
 						Log.Error($"Invalid camera shot file path: {fullFilePath}");
 
-					file.WriteToFile(CameraService.Instance, actorMemory);
+					file.WriteToFile(CameraService.Instance, targetActorHandle);
 					using FileStream stream = new(fullFilePath, FileMode.Create);
 					file.Serialize(stream);
 				}
@@ -130,26 +125,33 @@ public class AutoSaveService : ServiceBase<AutoSaveService>
 				if (!Directory.Exists(posesDir))
 					Directory.CreateDirectory(posesDir);
 
+				index = 0;
 				foreach (var pinnedActor in TargetService.Instance.PinnedActors.ToList())
 				{
-					var actor = pinnedActor.Memory;
-					if (actor == null || actor.ModelObject == null || actor.ModelObject.Skeleton == null)
+					var actorHandle = pinnedActor.Memory;
+					if (actorHandle == null || actorHandle.Do(a => a.ModelObject == null || a.ModelObject!.Skeleton == null) != false)
 						continue;
 
-					var skeleton = new Skeleton(actor);
+					var skeleton = new Skeleton(actorHandle);
 
 					PoseFile file = new();
-					string fullFilePath = Path.Combine(posesDir, $"{actor.Name}{file.FileExtension}");
+					string fullFilePath = Path.Combine(posesDir, $"{actorHandle.DoRef(a => a.Name) ?? $"Unknown - {index}"}{file.FileExtension}");
 					if (fullFilePath.Any(c => invalidPathChars.Contains(c)))
 					{
 						Log.Error($"Invalid pose file path: {fullFilePath}");
 						break;
 					}
 
-					file.WriteToFile(actor, skeleton, null);
+					file.WriteToFile(actorHandle, skeleton, null);
 					using FileStream stream = new(fullFilePath, FileMode.Create);
 					file.Serialize(stream);
+					index++;
 				}
+			}
+
+			if (GposeService.Instance.IsGpose)
+			{
+				PosePage.WorkQueue.Value.EnqueueAndWaitOrDo(PerformCameraAndPoseAutoSave);
 			}
 		}
 		finally

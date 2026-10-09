@@ -1,5 +1,6 @@
 ﻿<UserControl
 	x:Class="Anamnesis.Actor.Pages.PosePage"
+	x:Name="RootControl"
 	xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 	xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 	xmlns:anaUtils="clr-namespace:Anamnesis"
@@ -59,7 +60,7 @@
 								FontSize="10"
 								FontWeight="Bold"
 								BorderBrush="Transparent"
-								Visibility="{Binding Skeleton.SelectedBones, Converter={StaticResource NotEmptyToVisibilityConverter}}"
+								Visibility="{Binding Skeleton.SelectedBones, Converter={StaticResource NotEmptyToVisibilityConverter}, Mode=OneWay}"
 								IsReadOnly="{Binding IsMultipleBonesSelected}"
 								Style="{StaticResource MaterialDesignTextBox}">
 								<TextBox.ToolTip>
@@ -72,13 +73,13 @@
 													HorizontalAlignment="Right"
 													FontSize="10"
 													VerticalAlignment="Top"
-													Visibility="{Binding IsSingleBoneSelected, Converter={StaticResource B2V}}"/>
+													Visibility="{Binding IsSingleBoneSelected, Converter={StaticResource B2V}, Mode=OneWay}"/>
 
 							<XivToolsWpf:TextBlock
 								Key="Pose_NothingSelected"
 								HorizontalAlignment="Left"
 								Style="{StaticResource Header}"
-								Visibility="{Binding Skeleton.SelectedBones, Converter={StaticResource IsEmptyToVisibilityConverter}}" />
+								Visibility="{Binding Skeleton.SelectedBones, Converter={StaticResource IsEmptyToVisibilityConverter}, Mode=OneWay}" />
 						</Grid>
 
 
@@ -155,13 +156,13 @@
 
 						<!-- Transform editor -->
 						<Grid Grid.Row="2" Grid.ColumnSpan="2" IsEnabled="{Binding GposeService.IsGpose}">
-							<controls:TransformEditor Skeleton="{Binding Skeleton, Mode=OneWay}"/>
+							<controls:TransformEditor x:Name="TransformEditor" Skeleton="{Binding Skeleton, Mode=OneWay}"/>
 
-							<XivToolsWpf:InfoControl Key="Pose_WarningNotFrozen" Margin="0,0,0,46">
+							<XivToolsWpf:InfoControl Key="Pose_WarningNotFrozen" Margin="0,0,0,52">
 								<XivToolsWpf:InfoControl.Visibility>
 									<MultiBinding Converter="{StaticResource MultiBoolAndToVisibility}">
-										<Binding Path="TargetService.SelectedActor.IsMotionEnabled"/>
-										<Binding Path="PoseService.WorldPositionNotFrozen"/>
+										<Binding Path="TargetService.SelectedActor.Unsafe.IsMotionEnabled"/>
+										<Binding Path="PoseService.WorldStateNotFrozen"/>
 									</MultiBinding>
 								</XivToolsWpf:InfoControl.Visibility>
 							</XivToolsWpf:InfoControl>
@@ -191,21 +192,21 @@
 								<ContentControl>
 									<StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Background="Transparent">
 										<CheckBox Margin="3" VerticalContentAlignment="Center"
-												   IsChecked="{Binding ImportPoseRotation, Mode=TwoWay}">
+												   IsChecked="{Binding ImportPoseRotation, ElementName=RootControl, Mode=TwoWay}">
 											<XivToolsWpf:TextBlock Key="Pose_EnableRotation" Margin="0,-2,0,2" />
 											<CheckBox.ToolTip>
 												<XivToolsWpf:TextBlock Key="Pose_ImportRotationImportTooltip" />
 											</CheckBox.ToolTip>
 										</CheckBox>
 										<CheckBox Margin="3" VerticalContentAlignment="Center"
-												  IsChecked="{Binding ImportPosePosition, Mode=TwoWay}">
+												  IsChecked="{Binding ImportPosePosition, ElementName=RootControl, Mode=TwoWay}">
 											<XivToolsWpf:TextBlock Key="Pose_EnablePosition" Margin="0,-2,0,2" />
 											<CheckBox.ToolTip>
 												<XivToolsWpf:TextBlock Key="Pose_ImportPositionImportTooltip" />
 											</CheckBox.ToolTip>
 										</CheckBox>
 										<CheckBox Margin="3" VerticalContentAlignment="Center"
-												  IsChecked="{Binding ImportPoseScale, Mode=TwoWay}">
+												  IsChecked="{Binding ImportPoseScale, ElementName=RootControl, Mode=TwoWay}">
 											<XivToolsWpf:TextBlock Key="Pose_EnableScale" Margin="0,-2,0,2" />
 											<CheckBox.ToolTip>
 												<XivToolsWpf:TextBlock Key="Pose_ImportScaleImportTooltip" />
@@ -299,7 +300,6 @@
 				<Border Grid.Column="0" Style="{StaticResource Panel}">
 					<Grid>
 						<StackPanel VerticalAlignment="Center" Orientation="Horizontal">
-
 							<ToggleButton
 								Style="{StaticResource MaterialDesignSwitchToggleButton}"
 								IsEnabled="{Binding GposeService.IsGpose}" 
@@ -318,79 +318,78 @@
 
 							<CheckBox Margin="3,0,6,0"
 									  IsEnabled="{Binding GposeService.IsGpose}"
-									  IsChecked="{Binding PoseService.FreezeWorldPosition}">
+									  IsChecked="{Binding PoseService.FreezeWorldState}">
 
 								<ToggleButton.ToolTip>
-									<XivToolsWpf:TextBlock Key="Character_Action_GlobalFreezeWorldPositionsTooltip"/>
+									<XivToolsWpf:TextBlock Key="Character_Action_GlobalFreezeWorldStateTooltip"/>
 								</ToggleButton.ToolTip>
 
-								<XivToolsWpf:TextBlock Key="Character_Action_GlobalFreezeWorldPositions" Margin="0, 0, 0, 3"/>
+								<XivToolsWpf:TextBlock Key="Character_Action_GlobalFreezeWorldState" Margin="0, 0, 0, 3"/>
 							</CheckBox>
 
-							<CheckBox
-								Margin="3,0,6,0"
-								VerticalContentAlignment="Center"
-								IsChecked="{Binding PoseService.EnableParenting}"
-								IsEnabled="{Binding PoseService.IsEnabled}">
-								<XivToolsWpf:TextBlock Key="Pose_Parenting" Margin="0, 0, 0, 3"/>
-							</CheckBox>
-
-							<Button
-									Margin="2"
-									Padding="6,3"
-									MinWidth="48"
-									Click="OnClearClicked"
-									IsEnabled="{Binding Skeleton.HasSelection}"
+							<Button Margin="0,3,6,3" MinWidth="48"
+									VerticalContentAlignment="Center"
+									Click="OnParentingModeClicked"
+									IsEnabled="{Binding PoseService.IsEnabled}"
 									Style="{StaticResource TransparentButton}">
-								<XivToolsWpf:TextBlock Key="Pose_Clear" />
-							</Button>
+								<Button.ToolTip>
+									<XivToolsWpf:TextBlock Key="Pose_Parenting_Tooltip"/>
+								</Button.ToolTip>
+								
+								<Grid Margin="5, 0, 5, 0" Width="115">
+									<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+										<StackPanel.Style>
+											<Style TargetType="StackPanel">
+												<Setter Property="Visibility" Value="Collapsed"/>
+												<Style.Triggers>
+													<DataTrigger Binding="{Binding PoseService.ParentingMode}" Value="Full">
+														<Setter Property="Visibility" Value="Visible"/>
+													</DataTrigger>
+												</Style.Triggers>
+											</Style>
+										</StackPanel.Style>
+										<XivToolsWpf:IconBlock Icon="Link" Margin="0,1,5,0" FontSize="11"/>
+										<XivToolsWpf:TextBlock Key="Pose_Parenting_Full" Margin="0"/>
+									</StackPanel>
 
+									<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+										<StackPanel.Style>
+											<Style TargetType="StackPanel">
+												<Setter Property="Visibility" Value="Collapsed"/>
+												<Style.Triggers>
+													<DataTrigger Binding="{Binding PoseService.ParentingMode}" Value="PositionOnly">
+														<Setter Property="Visibility" Value="Visible"/>
+													</DataTrigger>
+												</Style.Triggers>
+											</Style>
+										</StackPanel.Style>
+										<XivToolsWpf:IconBlock Icon="ArrowsAlt" Margin="0,1,5,0" FontSize="11"/>
+										<XivToolsWpf:TextBlock Key="Pose_Parenting_PositionOnly" Margin="0"/>
+									</StackPanel>
+
+									<StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+										<StackPanel.Style>
+											<Style TargetType="StackPanel">
+												<Setter Property="Visibility" Value="Collapsed"/>
+												<Style.Triggers>
+													<DataTrigger Binding="{Binding PoseService.ParentingMode}" Value="None">
+														<Setter Property="Visibility" Value="Visible"/>
+													</DataTrigger>
+												</Style.Triggers>
+											</Style>
+										</StackPanel.Style>
+										<XivToolsWpf:IconBlock Icon="Unlink" Margin="0,1,5,0" FontSize="11"/>
+										<XivToolsWpf:TextBlock Key="Pose_Parenting_Off" Margin="0"/>
+									</StackPanel>
+								</Grid>
+							</Button>
 						</StackPanel>
 
-						<Border
-							Margin="2"
-							Padding="3"
-							HorizontalAlignment="Right"
-							Background="{DynamicResource AttentionToActionBrush}"
-							CornerRadius="6">
-							<StackPanel Orientation="Horizontal">
-								<CheckBox
-									Margin="3"
-									VerticalContentAlignment="Center"
-									IsChecked="{Binding PoseService.FreezeRotation}"
-									IsEnabled="{Binding PoseService.IsEnabled}">
-									<XivToolsWpf:TextBlock Key="Pose_EnableRotation" Margin="0,-2,0,2" />
-
-									<CheckBox.ToolTip>
-										<XivToolsWpf:TextBlock Key="Pose_EnableRotationTooltip" />
-									</CheckBox.ToolTip>
-								</CheckBox>
-
-								<CheckBox
-									Margin="3"
-									VerticalContentAlignment="Center"
-									IsChecked="{Binding PoseService.FreezePositions}"
-									IsEnabled="{Binding PoseService.IsEnabled}">
-									<XivToolsWpf:TextBlock Key="Pose_EnablePosition" Margin="0,-2,0,2" />
-
-									<CheckBox.ToolTip>
-										<XivToolsWpf:TextBlock Key="Pose_EnablePositionTooltip" />
-									</CheckBox.ToolTip>
-								</CheckBox>
-
-								<CheckBox
-									Margin="3"
-									VerticalContentAlignment="Center"
-									IsChecked="{Binding PoseService.FreezeScale}"
-									IsEnabled="{Binding PoseService.IsEnabled}">
-									<XivToolsWpf:TextBlock Key="Pose_EnableScale" Margin="0,-2,0,2" />
-
-									<CheckBox.ToolTip>
-										<XivToolsWpf:TextBlock Key="Pose_EnableScaleTooltip" />
-									</CheckBox.ToolTip>
-								</CheckBox>
-							</StackPanel>
-						</Border>
+						<StackPanel Margin="2" Orientation="Horizontal" HorizontalAlignment="Right">
+							<Button Margin="2" Padding="6,3" MinWidth="48" Click="OnClearClicked" IsEnabled="{Binding Skeleton.HasSelection}" Style="{StaticResource TransparentButton}">
+								<XivToolsWpf:TextBlock Key="Pose_Clear" />
+							</Button>
+						</StackPanel>
 					</Grid>
 				</Border>
 			</Grid>
@@ -468,24 +467,24 @@
 				Margin="6, 7"
 				Grid.Row="0"
 				Grid.RowSpan="2"
-				Visibility="{Binding GposeService.IsGpose, Converter={StaticResource !B2V}}" />
+				Visibility="{Binding GposeService.IsGpose, Converter={StaticResource !B2V}, Mode=OneWay}" />
 
-			<Grid Visibility="{Binding GposeService.IsGpose, Converter={StaticResource B2V}}"
+			<Grid Visibility="{Binding GposeService.IsGpose, Converter={StaticResource B2V}, Mode=OneWay}"
 				  Grid.Row="0"
 				  Grid.RowSpan="2">
 				<XivToolsWpf:InfoControl IsError="False" Key="Pose_NotEnabled" VerticalAlignment="Bottom" Margin="6, 7" 
-										 Visibility="{Binding PoseService.IsEnabled, Converter={StaticResource !B2V}}"/>
+										 Visibility="{Binding PoseService.IsEnabled, Converter={StaticResource !B2V}, Mode=OneWay}"/>
 			</Grid>
 		</Grid>
 
-		<Grid Visibility="{Binding Actor, Converter={StaticResource NotNullToVisibilityConverter}}">
-			<Grid Visibility="{Binding Actor.ModelObject, Converter={StaticResource NotNullToVisibilityConverter}}">
-				<Grid Visibility="{Binding Skeleton, Converter={StaticResource NullToVisibilityConverter}}">
+		<Grid Visibility="{Binding Actor, Converter={StaticResource NotNullToVisibilityConverter}, Mode=OneWay}">
+			<Grid Visibility="{Binding Actor.Unsafe.ModelObject, Converter={StaticResource NotNullToVisibilityConverter}, Mode=OneWay}">
+				<Grid Visibility="{Binding Skeleton, Converter={StaticResource NullToVisibilityConverter}, Mode=OneWay}">
 					<XivToolsWpf:InfoControl IsError="True" Key="Pose_NoSkeleton" VerticalAlignment="Bottom" Margin="12"/>
 				</Grid>
 			</Grid>
 
-			<Grid Visibility="{Binding Actor.ModelObject, Converter={StaticResource NullToVisibilityConverter}}">
+			<Grid Visibility="{Binding Actor.Unsafe.ModelObject, Converter={StaticResource NullToVisibilityConverter}, Mode=OneWay}">
 				<XivToolsWpf:InfoControl IsError="True" Key="Pose_NoModel" VerticalAlignment="Bottom" Margin="12"/>
 			</Grid>
 		</Grid>
